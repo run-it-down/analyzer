@@ -1,0 +1,43 @@
+name: Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: zkdev
+          password: ${{ secrets.ZKDEV_PACKAGE_ACTIONS }}
+
+      - name: Build and push
+        id: docker_build
+        uses: docker/build-push-action@v2
+        with:
+          build-args: |
+            DBHOST_ARG=localhost
+            DBPORT_ARG=5432
+            DBUSER_ARG=postgres
+            DBPASSWD_ARG=${{ secrets.DBPASSWD }}
+            DB_ARG=run-it-down
+          context: .
+          file: ./Dockerfile
+          tags: |
+            ghcr.io/run-it-down/analyzer:latest
+          push: true
+          # used to fetch repository
+          secrets: |
+            GIT_AUTH_TOKEN=${{ github.token }}
