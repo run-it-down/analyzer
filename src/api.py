@@ -12,6 +12,7 @@ def create():
     api = falcon.API()
     api.add_route('/winrate', views.BaseMetrics.WinRate())
     api.add_route('/kda', views.BaseMetrics.KDA())
+    api.add_route('/cs', views.BaseMetrics.CreepScore())
     logger.info('falcon initialized')
 
     conn = database.get_connection()
@@ -22,4 +23,3 @@ def create():
 
 
 application = create()
-

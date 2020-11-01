@@ -31,3 +31,13 @@ class KDA:
         resp.body = json.dumps({
             "kda": kda
         })
+
+
+class CreepScore:
+    def on_get(self, req, resp):
+        logger.info('GET /kda')
+        params = req.params
+        conn = database.get_connection()
+        summoner = database.select_summoner(conn=conn, summoner_name=params['summoner'])
+        cs = analysis.base_analysis.get_creep_score(conn=conn, summoner=summoner)
+        resp.body = json.dumps(cs)

@@ -40,3 +40,26 @@ def get_kda(summoner: model.Summoner, conn):
         return (kda["kills"] + kda["assists"]) / kda["deaths"]
     except ZeroDivisionError:
         return -1
+
+
+def get_creep_score(summoner: model.Summoner, conn):
+    stat_ids = database.select_stat_from_participant(conn, summoner=summoner)
+    cs = {
+        "avg": 0,
+        "lanes": {
+            "top": 0,
+            "jgl": 0,
+            "mid": 0,
+            "adc": 0,
+            "sup": 0,
+        },
+    }
+    for stat_id in stat_ids:
+        stat = database.select_stats(conn=conn, statid=stat_id)
+        cs["avg"] += stat.totalMinionsKilled
+
+    try:
+        cs["avg"] = cs["avg"] / len(stat_ids)
+    except ZeroDivisionError:
+        cs["avg"] = -1
+    return cs
