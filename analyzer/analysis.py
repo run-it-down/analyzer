@@ -1,5 +1,8 @@
-import database
-import model
+try:
+    import database
+    import model
+except ModuleNotFoundError:
+    print('common package not in python path')
 
 
 def get_winrate(summoner: model.Summoner,

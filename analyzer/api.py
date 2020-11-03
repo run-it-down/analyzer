@@ -3,8 +3,11 @@ import json
 import falcon
 
 import analysis
-import database
-import util
+try:
+    import database
+    import util
+except ModuleNotFoundError:
+    print('common package not in python path')
 
 
 logger = util.Logger(__name__)
