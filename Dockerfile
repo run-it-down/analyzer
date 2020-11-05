@@ -7,6 +7,7 @@ RUN apk add --update py-pip
 RUN pip install --upgrade pip
 
 ADD analyzer /analyzer/
+ADD common /common/
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
@@ -22,5 +23,5 @@ ENV DBPORT=$DBPORT_ARG
 ENV DBUSER=$DBUSER_ARG
 ENV DBPASSWD=$DBPASSWD_ARG
 ENV DB=$DB_ARG
-ENV PYTHONPATH "/analyzer/"
+ENV PYTHONPATH "/analyzer/:/common/common/"
 ENTRYPOINT ["gunicorn", "-b", "0.0.0.0:8003", "analyzer.api", "--timeout", "600"]
