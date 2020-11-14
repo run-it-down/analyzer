@@ -1,1 +1,1 @@
-from views import BaseMetrics
+from views import BaseMetrics, CombinationMetrics
