@@ -1,1 +1,1 @@
-from analysis import base_analysis
+from analysis import base_analysis, combinations
