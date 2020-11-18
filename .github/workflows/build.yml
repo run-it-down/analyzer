@@ -10,6 +10,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       
+      - name: Checkout common
+        uses: actions/checkout@v2
+        with:
+          repository: 'run-it-down/common'
+          path: 'common/'
+          ssh-key: ${{ secrets.ZKDEV_SSH_KEY }}
+      
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       
