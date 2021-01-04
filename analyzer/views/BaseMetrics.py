@@ -35,7 +35,7 @@ class KDA:
 
 class CreepScore:
     def on_get(self, req, resp):
-        logger.info('GET /kda')
+        logger.info('GET /cs')
         params = req.params
         conn = database.get_connection()
         summoner = database.select_summoner(conn=conn, summoner_name=params['summoner'])

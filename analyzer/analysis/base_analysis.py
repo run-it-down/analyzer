@@ -46,20 +46,56 @@ def get_creep_score(summoner: model.Summoner, conn):
     stat_ids = database.select_stat_from_participant(conn, summoner=summoner)
     cs = {
         "avg": 0,
+        "total": 0,
+        "totalGames": len(stat_ids),
         "lanes": {
-            "top": 0,
-            "jgl": 0,
-            "mid": 0,
-            "adc": 0,
-            "sup": 0,
+            "top": {
+                "avg": 0, "total": 0, "totalGames": 0,
+            },
+            "jgl": {
+                "avg": 0, "total": 0, "totalGames": 0,
+            },
+            "mid": {
+                "avg": 0, "total": 0, "totalGames": 0,
+            },
+            "adc": {
+                "avg": 0, "total": 0, "totalGames": 0,
+            },
+            "sup": {
+                "avg": 0, "total": 0, "totalGames": 0,
+            },
         },
     }
     for stat_id in stat_ids:
         stat = database.select_stats(conn=conn, statid=stat_id)
-        cs["avg"] += stat.totalMinionsKilled
+        participant = database.select_participant_from_stat(conn=conn, stat=stat)
+        cs["total"] += stat.total_minions_killed
+
+        if participant.lane == "TOP":
+            cs["lanes"]["top"]["total"] += stat.total_minions_killed
+            cs["lanes"]["top"]["totalGames"] += 1
+        elif participant.lane == "JUNGLE":
+            cs["lanes"]["jgl"]["total"] += stat.total_minions_killed
+            cs["lanes"]["jgl"]["totalGames"] += 1
+        elif participant.lane == "MID" or participant.lane == "MIDDLE":
+            cs["lanes"]["mid"]["total"] += stat.total_minions_killed
+            cs["lanes"]["mid"]["totalGames"] += 1
+        elif participant.lane == "BOT" or participant.lane == "BOTTOM" or participant.role == "DUO_CARRY":
+            cs["lanes"]["adc"]["total"] += stat.total_minions_killed
+            cs["lanes"]["adc"]["totalGames"] += 1
+        elif participant.lane == "BOT" or participant.lane == "BOTTOM" or participant.role == "DUO_SUPPORT":
+            cs["lanes"]["sup"]["total"] += stat.total_minions_killed
+            cs["lanes"]["sup"]["totalGames"] += 1
 
     try:
-        cs["avg"] = cs["avg"] / len(stat_ids)
+        cs["avg"] = cs["total"] / cs["totalGames"]
     except ZeroDivisionError:
         cs["avg"] = -1
+
+    for lane in cs["lanes"].keys():
+        try:
+            cs["lanes"][lane]["avg"] = cs["lanes"][lane]["total"] / cs["lanes"][lane]["totalGames"]
+        except ZeroDivisionError:
+            cs["lanes"][lane]["avg"] = -1
+
     return cs
