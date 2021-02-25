@@ -25,3 +25,6 @@ def create():
 
 
 application = create()
+
+import waitress
+waitress.serve(application, host="localhost", port="2000")
