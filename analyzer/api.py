@@ -14,6 +14,7 @@ def create():
     api.add_route('/kda', views.BaseMetrics.KDA())
     api.add_route('/cs', views.BaseMetrics.CreepScore())
     api.add_route('/combinations/champions', views.CombinationMetrics.ChampionCombinations())
+    api.add_route('/aggression', views.AggressionMetrics.Aggression())
 
     logger.info('falcon initialized')
 
