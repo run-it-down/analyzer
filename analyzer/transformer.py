@@ -11,8 +11,8 @@ def transform_gold_diff(games, conn):
     :return:
     """
     gold_diff = {
-        1: np.zeros(shape=(len(games), 15)),
-        2: np.zeros(shape=(len(games), 15))
+        "p1": np.zeros(shape=(len(games), 15)),
+        "p2": np.zeros(shape=(len(games), 15))
     }
     for idx, game in enumerate(games):
         p1_id, p2_id = game["s1_participantid"], game["s2_participantid"]
@@ -26,20 +26,20 @@ def transform_gold_diff(games, conn):
         game_diff_shape, gold_diff_shape = None, None
         if type(p1_game_gold_diff) is not list:
             game_diff_shape = p1_game_gold_diff.shape[0]
-            gold_diff_shape = gold_diff[1].shape[1]
+            gold_diff_shape = gold_diff["p1"].shape[1]
         if type(p2_game_gold_diff) is not list:
             game_diff_shape = p2_game_gold_diff.shape[0]
-            gold_diff_shape = gold_diff[2].shape[1]
+            gold_diff_shape = gold_diff["p2"].shape[1]
 
         if game_diff_shape and gold_diff_shape:
             if game_diff_shape < gold_diff_shape:
-                gold_diff[1][idx, :game_diff_shape] = p1_game_gold_diff
-                gold_diff[2][idx, :game_diff_shape] = p2_game_gold_diff
+                gold_diff["p1"][idx, :game_diff_shape] = p1_game_gold_diff
+                gold_diff["p2"][idx, :game_diff_shape] = p2_game_gold_diff
             else:
-                gold_diff[1].resize(len(games), game_diff_shape)
-                gold_diff[2].resize(len(games), game_diff_shape)
-                gold_diff[1][idx, :] = p1_game_gold_diff
-                gold_diff[2][idx, :] = p2_game_gold_diff
+                gold_diff["p1"] = np.hstack((gold_diff["p1"], np.zeros((len(games), (game_diff_shape - gold_diff_shape)))))
+                gold_diff["p2"] = np.hstack((gold_diff["p2"], np.zeros((len(games), (game_diff_shape - gold_diff_shape)))))
+                gold_diff["p1"][idx, :] = p1_game_gold_diff
+                gold_diff["p2"][idx, :] = p2_game_gold_diff
     return gold_diff
 
 

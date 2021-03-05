@@ -1,5 +1,6 @@
 import json
 
+import analysis
 import database
 import util
 import transformer
@@ -20,5 +21,6 @@ class Aggression:
         common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
 
         gold_stats = transformer.transform_gold_diff(common_games, conn)
+        average_gold_diff = analysis.base_analysis.get_gold_difference(gold_stats)
 
-        resp.body = json.dumps([])
+        resp.body = json.dumps(average_gold_diff)

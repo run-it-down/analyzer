@@ -1,3 +1,5 @@
+import numpy as np
+
 import database
 
 
@@ -101,3 +103,13 @@ def get_creep_score(common_games, conn):
         cs["summoner2"]["lanes"][lane] += (stat_summoner2.total_minions_killed - cs["summoner2"]["lanes"][lane]) / counter["summoner2"][lane]
 
     return cs
+
+
+def get_gold_difference(gold_diffs):
+    p1_gold_diff: np.ndarray = gold_diffs["p1"]
+    p2_gold_diff: np.ndarray = gold_diffs["p2"]
+    means = {
+        "p1": p1_gold_diff.mean(axis=0).tolist(),
+        "p2": p2_gold_diff.mean(axis=0).tolist()
+    }
+    return means
