@@ -1,3 +1,5 @@
+import ast
+
 import numpy as np
 
 import database
@@ -36,11 +38,60 @@ def transform_gold_diff(games, conn):
                 gold_diff["p1"][idx, :game_diff_shape] = p1_game_gold_diff
                 gold_diff["p2"][idx, :game_diff_shape] = p2_game_gold_diff
             else:
+                # If shape of game array is bigger than current shape -> reshape current array to fit all elements
                 gold_diff["p1"] = np.hstack((gold_diff["p1"], np.zeros((len(games), (game_diff_shape - gold_diff_shape)))))
                 gold_diff["p2"] = np.hstack((gold_diff["p2"], np.zeros((len(games), (game_diff_shape - gold_diff_shape)))))
                 gold_diff["p1"][idx, :] = p1_game_gold_diff
                 gold_diff["p2"][idx, :] = p2_game_gold_diff
     return gold_diff
+
+
+def transform_positions(games, conn):
+    """
+    Returns a dictionary containing numpy arrays filled with positional data for both players.
+    :param games:
+    :param conn:
+    :return:
+    """
+    # use minimum time of 15 (early surrender)
+    # Side can be determined by using the first position in each game
+    shape = [len(games), 15, 2]
+    positions = {
+        "p1": np.zeros(shape=shape),
+        "p2": np.zeros(shape=shape)
+    }
+    for idx, game in enumerate(games):
+        p1_id, p2_id = game["s1_participantid"], game["s2_participantid"]
+        p1_frames = database.select_positions(conn, p1_id)
+        p2_frames = database.select_positions(conn, p2_id)
+
+        p1_game_positions, p2_game_positions = [], []
+        for index in range(len(p1_frames)):
+            p1_position = p1_frames[index]["position"]
+            p2_position = p2_frames[index]["position"]
+            if p1_position:
+                pos = ast.literal_eval(p1_position)
+                p1_game_positions.append(pos)
+            if p2_position:
+                pos = ast.literal_eval(p2_position)
+                p2_game_positions.append(pos)
+
+        # Assumption: P1 and P2 arrays have the same dimensions
+        p1_position_array, p2_position_array = np.array(p1_game_positions), np.array(p2_game_positions)
+        game_position_shape, overall_position_shape = p1_position_array.shape[0], positions["p1"].shape[1]
+        if game_position_shape < overall_position_shape:
+            positions["p1"][idx, :game_position_shape] = p1_position_array
+            positions["p2"][idx, :game_position_shape] = p2_position_array
+        else:
+            # If shape of game array is bigger than current shape -> reshape current array to fit all elements
+            positions["p1"] = np.hstack((positions["p1"], np.zeros([len(games), (game_position_shape - overall_position_shape), 2])))
+            positions["p1"][idx] = positions["p1"][idx].reshape((game_position_shape, 2))
+            positions["p1"][idx, :] = p1_position_array
+            positions["p2"] = np.hstack((positions["p2"], np.zeros([len(games), (game_position_shape - overall_position_shape), 2])))
+            positions["p2"][idx] = positions["p2"][idx].reshape((game_position_shape, 2))
+            positions["p2"][idx, :] = p1_position_array
+
+    return positions
 
 
 def build_gold_diff_array(participant_id: str, lane_opponent, conn):

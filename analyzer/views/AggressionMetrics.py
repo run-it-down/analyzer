@@ -23,4 +23,6 @@ class Aggression:
         gold_stats = transformer.transform_gold_diff(common_games, conn)
         average_gold_diff = analysis.base_analysis.get_gold_difference(gold_stats)
 
+        positions = transformer.transform_positions(common_games, conn)
+
         resp.body = json.dumps(average_gold_diff)
