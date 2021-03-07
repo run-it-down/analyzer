@@ -113,3 +113,32 @@ def get_gold_difference(gold_diffs):
         "p2": p2_gold_diff.mean(axis=0).tolist()
     }
     return means
+
+
+def get_kp_per_game(kill_information):
+    overall_kill_info: np.ndarray = kill_information["overall"]
+    p1_kill_info: np.ndarray = kill_information["p1"]
+    p2_kill_info: np.ndarray = kill_information["p2"]
+
+    print(p1_kill_info[:, 0] + p1_kill_info[:, 2])
+    print(p2_kill_info[:, 0] + p2_kill_info[:, 2])
+
+    kp = {
+        "p1": (p1_kill_info[:, 0] + p1_kill_info[:, 2]) / overall_kill_info[:, 0],
+        "p2": (p2_kill_info[:, 0] + p2_kill_info[:, 2]) / overall_kill_info[:, 0]
+    }
+
+    return kp
+
+
+def get_average_kp(kill_information):
+    overall_kill_info: np.ndarray = kill_information["overall"]
+    p1_kill_info: np.ndarray = kill_information["p1"]
+    p2_kill_info: np.ndarray = kill_information["p2"]
+
+    avg_kp = {
+        "p1": np.average((p1_kill_info[:, 0] + p1_kill_info[:, 2]) / overall_kill_info[:, 0]),
+        "p2": np.average((p2_kill_info[:, 0] + p2_kill_info[:, 2]) / overall_kill_info[:, 0])
+    }
+
+    return avg_kp

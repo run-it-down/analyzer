@@ -25,4 +25,8 @@ class Aggression:
 
         positions = transformer.transform_positions(common_games, conn)
 
+        kill_information = transformer.transform_kills(common_games, conn)
+        kp = analysis.base_analysis.get_kp_per_game(kill_information)
+        print(kp)
+
         resp.body = json.dumps(average_gold_diff)

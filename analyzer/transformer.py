@@ -94,6 +94,33 @@ def transform_positions(games, conn):
     return positions
 
 
+def transform_kills(games, conn):
+    # kills, deaths, assists
+    kill_information = {
+        "overall": [],
+        "p1": [],
+        "p2": []
+    }
+    for idx, game in enumerate(games):
+        s1_id, s2_id = game["s1_statid"], game["s2_statid"]
+        p1_stats = database.select_stats(conn, s1_id)
+        p2_stats = database.select_stats(conn, s2_id)
+
+        kill_information["overall"].append(database.select_overall_kill_information(
+            conn=conn,
+            game_id=game["gameid"],
+            team_id=game["s1_teamid"]
+        ))
+        kill_information["p1"].append(np.array([p1_stats.kills, p1_stats.deaths, p1_stats.assists]))
+        kill_information["p2"].append(np.array([p2_stats.kills, p2_stats.deaths, p2_stats.assists]))
+
+    kill_information["overall"] = np.array(kill_information["overall"])
+    kill_information["p1"] = np.array(kill_information["p1"])
+    kill_information["p2"] = np.array(kill_information["p2"])
+
+    return kill_information
+
+
 def build_gold_diff_array(participant_id: str, lane_opponent, conn):
     participant_frames = database.select_participant_frames(conn=conn, participant_id=participant_id)
     opponent_frames = database.select_participant_frames(conn=conn, participant_id=lane_opponent.participant_id)
