@@ -27,6 +27,10 @@ class Aggression:
 
         kill_information = transformer.transform_kills(common_games, conn)
         kp = analysis.base_analysis.get_kp_per_game(kill_information)
-        print(kp)
+        kp_avg = analysis.base_analysis.get_average_kp(kp)
+
+        kill_timeline = transformer.transform_kill_timeline(common_games, conn)
+        kp_per_state = analysis.aggression.kp_per_state(kill_timeline)
+        avg_kp_per_state = analysis.aggression.avg_kp_per_state(kp_per_state)
 
         resp.body = json.dumps(average_gold_diff)

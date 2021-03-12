@@ -21,8 +21,13 @@ def transform_gold_diff(games, conn):
         lane_opponent_p1, lane_opponent_p2 = get_lane_opponent(participant_id=p1_id, conn=conn), get_lane_opponent(
             participant_id=p2_id, conn=conn)
 
-        p1_game_gold_diff = build_gold_diff_array(p1_id, lane_opponent_p1, conn) if lane_opponent_p1 is not None else []
-        p2_game_gold_diff = build_gold_diff_array(p2_id, lane_opponent_p2, conn) if lane_opponent_p2 is not None else []
+        if lane_opponent_p1 is None:
+            continue
+        if lane_opponent_p2 is None:
+            continue
+
+        p1_game_gold_diff = build_gold_diff_array(p1_id, lane_opponent_p1, conn)
+        p2_game_gold_diff = build_gold_diff_array(p2_id, lane_opponent_p2, conn)
 
         # Assumption: P1 and P2 Timeline have the same length -> therefore the same dimensions
         game_diff_shape, gold_diff_shape = None, None
@@ -39,8 +44,10 @@ def transform_gold_diff(games, conn):
                 gold_diff["p2"][idx, :game_diff_shape] = p2_game_gold_diff
             else:
                 # If shape of game array is bigger than current shape -> reshape current array to fit all elements
-                gold_diff["p1"] = np.hstack((gold_diff["p1"], np.zeros((len(games), (game_diff_shape - gold_diff_shape)))))
-                gold_diff["p2"] = np.hstack((gold_diff["p2"], np.zeros((len(games), (game_diff_shape - gold_diff_shape)))))
+                gold_diff["p1"] = np.hstack(
+                    (gold_diff["p1"], np.zeros((len(games), (game_diff_shape - gold_diff_shape)))))
+                gold_diff["p2"] = np.hstack(
+                    (gold_diff["p2"], np.zeros((len(games), (game_diff_shape - gold_diff_shape)))))
                 gold_diff["p1"][idx, :] = p1_game_gold_diff
                 gold_diff["p2"][idx, :] = p2_game_gold_diff
     return gold_diff
@@ -84,10 +91,12 @@ def transform_positions(games, conn):
             positions["p2"][idx, :game_position_shape] = p2_position_array
         else:
             # If shape of game array is bigger than current shape -> reshape current array to fit all elements
-            positions["p1"] = np.hstack((positions["p1"], np.zeros([len(games), (game_position_shape - overall_position_shape), 2])))
+            positions["p1"] = np.hstack(
+                (positions["p1"], np.zeros([len(games), (game_position_shape - overall_position_shape), 2])))
             positions["p1"][idx] = positions["p1"][idx].reshape((game_position_shape, 2))
             positions["p1"][idx, :] = p1_position_array
-            positions["p2"] = np.hstack((positions["p2"], np.zeros([len(games), (game_position_shape - overall_position_shape), 2])))
+            positions["p2"] = np.hstack(
+                (positions["p2"], np.zeros([len(games), (game_position_shape - overall_position_shape), 2])))
             positions["p2"][idx] = positions["p2"][idx].reshape((game_position_shape, 2))
             positions["p2"][idx, :] = p1_position_array
 
@@ -119,6 +128,52 @@ def transform_kills(games, conn):
     kill_information["p2"] = np.array(kill_information["p2"])
 
     return kill_information
+
+
+def transform_kill_timeline(games, conn):
+    kill_timeline = {
+        "overall": {"early": [], "mid": [], "late": []},
+        "p1": {"early": [], "mid": [], "late": []},
+        "p2": {"early": [], "mid": [], "late": []}
+    }
+    conversion_factor = 60 * 1000  # ms to m
+    for idx, game in enumerate(games):
+        p1_id, p2_id = game["s1_participantid"], game["s2_participantid"]
+        game_kill_timeline = database.select_kill_timeline(conn, game_id=game["gameid"], team_id=game["s1_teamid"])
+
+        kill_timeline_game = {
+            "overall": {"early": [], "mid": [], "late": []},
+            "p1": {"early": [], "mid": [], "late": []},
+            "p2": {"early": [], "mid": [], "late": []}
+        }
+        for kill in game_kill_timeline:
+            participant, game_state = None, None
+            kill_time = kill["timestamp"] / conversion_factor
+
+            if kill["killer"] == p1_id:
+                participant = "p1"
+            elif kill["killer"] == p2_id:
+                participant = "p2"
+
+            if kill_time <= 15:
+                game_state = "early"
+            elif kill_time <= 25:
+                game_state = "mid"
+            else:
+                game_state = "late"
+
+            kill_timeline_game["overall"][game_state].append(np.array(kill_time))
+            if participant:
+                kill_timeline_game[participant][game_state].append(np.array(kill_time))
+
+        for key in kill_timeline["overall"].keys():
+            kill_timeline["overall"][key].append(np.array(kill_timeline_game["overall"][key]))
+        for key in kill_timeline["p1"].keys():
+            kill_timeline["p1"][key].append(np.array(kill_timeline_game["p1"][key]))
+        for key in kill_timeline["p2"].keys():
+            kill_timeline["p2"][key].append(np.array(kill_timeline_game["p2"][key]))
+
+    return kill_timeline
 
 
 def build_gold_diff_array(participant_id: str, lane_opponent, conn):

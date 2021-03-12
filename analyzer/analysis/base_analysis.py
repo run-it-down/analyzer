@@ -120,9 +120,6 @@ def get_kp_per_game(kill_information):
     p1_kill_info: np.ndarray = kill_information["p1"]
     p2_kill_info: np.ndarray = kill_information["p2"]
 
-    print(p1_kill_info[:, 0] + p1_kill_info[:, 2])
-    print(p2_kill_info[:, 0] + p2_kill_info[:, 2])
-
     kp = {
         "p1": (p1_kill_info[:, 0] + p1_kill_info[:, 2]) / overall_kill_info[:, 0],
         "p2": (p2_kill_info[:, 0] + p2_kill_info[:, 2]) / overall_kill_info[:, 0]
@@ -131,14 +128,10 @@ def get_kp_per_game(kill_information):
     return kp
 
 
-def get_average_kp(kill_information):
-    overall_kill_info: np.ndarray = kill_information["overall"]
-    p1_kill_info: np.ndarray = kill_information["p1"]
-    p2_kill_info: np.ndarray = kill_information["p2"]
-
+def get_average_kp(kp_game):
     avg_kp = {
-        "p1": np.average((p1_kill_info[:, 0] + p1_kill_info[:, 2]) / overall_kill_info[:, 0]),
-        "p2": np.average((p2_kill_info[:, 0] + p2_kill_info[:, 2]) / overall_kill_info[:, 0])
+        "p1": np.average(kp_game["p1"]),
+        "p2": np.average(kp_game["p2"])
     }
 
     return avg_kp
