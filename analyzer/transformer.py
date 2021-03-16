@@ -91,12 +91,14 @@ def transform_positions(games, conn):
             positions["p2"][idx, :game_position_shape] = p2_position_array
         else:
             # If shape of game array is bigger than current shape -> reshape current array to fit all elements
+            np_zeros = np.zeros([len(games), (game_position_shape - overall_position_shape), 2])
+            np_zeros[:] = np.nan
             positions["p1"] = np.hstack(
-                (positions["p1"], np.zeros([len(games), (game_position_shape - overall_position_shape), 2])))
+                (positions["p1"], np_zeros))
             positions["p1"][idx] = positions["p1"][idx].reshape((game_position_shape, 2))
             positions["p1"][idx, :] = p1_position_array
             positions["p2"] = np.hstack(
-                (positions["p2"], np.zeros([len(games), (game_position_shape - overall_position_shape), 2])))
+                (positions["p2"], np_zeros))
             positions["p2"][idx] = positions["p2"][idx].reshape((game_position_shape, 2))
             positions["p2"][idx, :] = p1_position_array
 
@@ -193,15 +195,3 @@ def get_lane_opponent(participant_id, conn):
         conn, participant_id=participant_id, game_id=participant.game_id, position=(participant.lane, participant.role)
     )
     return lane_opponent
-
-
-def get_canonic_lane(lane: str, role: str):
-    role_mapping = {
-        ("MIDDLE", "SOLO"): "MIDDLE",
-        ("TOP", "SOLO"): "TOP",
-        ("JUNGLE", "NONE"): "JUNGLE",
-        ("BOTTOM", "DUO_CARRY"): "BOTTOM",
-        ("BOTTOM", "SOLO"): "BOTTOM",
-        ("BOTTOM", "DUO_SUPPORT"): "SUPPORT"
-    }
-    return role_mapping[(lane, role)]

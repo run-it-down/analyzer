@@ -23,7 +23,13 @@ class Aggression:
         gold_stats = transformer.transform_gold_diff(common_games, conn)
         average_gold_diff = analysis.base_analysis.get_gold_difference(gold_stats)
 
+        def win_to_int(win: str): return 1 if win == 'Win' else 0
+
         positions = transformer.transform_positions(common_games, conn)
+        analysis.aggression.positioning(positions,
+                                        [(game["s1_role"], game["s1_lane"], game["s1_teamid"], win_to_int(game["win"]))
+                                         for game in common_games],
+                                        "late")
 
         kill_information = transformer.transform_kills(common_games, conn)
         kp = analysis.base_analysis.get_kp_per_game(kill_information)

@@ -18,6 +18,18 @@ def urljoin(*parts):
     return '/'.join([first] + middle + [last])
 
 
+def get_canonic_lane(lane: str, role: str):
+    role_mapping = {
+        ("MIDDLE", "SOLO"): "MIDDLE",
+        ("TOP", "SOLO"): "TOP",
+        ("JUNGLE", "NONE"): "JUNGLE",
+        ("BOTTOM", "DUO_CARRY"): "BOTTOM",
+        ("BOTTOM", "SOLO"): "BOTTOM",
+        ("BOTTOM", "DUO_SUPPORT"): "SUPPORT"
+    }
+    return role_mapping[(lane, role)]
+
+
 class Logger:
 
     # [2020-03-06 11:08:42.24][__main__][4450495936] INFO: log string example displayed
