@@ -1,4 +1,5 @@
 import datetime
+import numpy as np
 from string import Template
 import sys
 import threading
@@ -28,6 +29,19 @@ def get_canonic_lane(lane: str, role: str):
         ("BOTTOM", "DUO_SUPPORT"): "SUPPORT"
     }
     return role_mapping[(lane, role)]
+
+
+def normalize(a: np.ndarray):
+    return (a - np.nanmin(a)) / (np.nanmax(a) - np.nanmin(a))
+
+
+def normalize_arr(a: []):
+    arr = np.array(a)
+    return normalize(arr)
+
+
+def cust_normalize(a: np.ndarray, min, max):
+    return (a - min) / (max - min)
 
 
 class Logger:
