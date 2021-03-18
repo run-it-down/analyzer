@@ -48,7 +48,7 @@ def aggression(gold_diff, position_ratio, kps, csds, kda):
                 "name": "balanced",
                 "value": (means["p1"]["early"], means["p1"]["mid"], means["p1"]["late"])
             }
-        else:pr
+        else:
             aggression_players["p1"]["type"] = {
                 "name": "aggressive",
                 "value": (means["p1"]["early"], means["p1"]["mid"], means["p1"]["late"])
