@@ -1,6 +1,7 @@
 import numpy as np
 
 import database
+import model
 
 
 def get_win_rate(common_games, conn):
@@ -135,3 +136,18 @@ def get_average_kp(kp_game):
     }
 
     return avg_kp
+
+
+def kill_participation(participant: str, kills):
+    overall_kills = 0
+    summoner_kp = 0
+
+    for kill in kills:
+        if kill["killer"] == participant or participant in kill["assistingparticipantids"]:
+            summoner_kp += 1
+        overall_kills += 1
+
+    try:
+        return summoner_kp / overall_kills
+    except ZeroDivisionError:
+        return 0

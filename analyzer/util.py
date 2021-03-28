@@ -28,7 +28,10 @@ def get_canonic_lane(lane: str, role: str):
         ("BOTTOM", "SOLO"): "BOTTOM",
         ("BOTTOM", "DUO_SUPPORT"): "SUPPORT"
     }
-    return role_mapping[(lane, role)]
+    try:
+        return role_mapping[(lane, role)]
+    except KeyError:
+        return None
 
 
 def normalize(a: np.ndarray):
