@@ -1,172 +1,126 @@
+import ast
 import math
 
 import numpy as np
 
-from enums import GameState
+from enums import GameState, Constants, Role, Map
 import util
 
 logger = util.Logger(__name__)
+# epsilon - "neutral" region
+EPSILON = 1000
 
 
-def aggression(gold_diff, position_ratio, kps, csds, kda):
-    # print(gold_diff["p1"], len(position_ratio["p1"]), len(kps), len(csds))
-    game_length = len(gold_diff["p1"]["early"])
+def positioning(team_id, frames):
+    aggressive = []
+    passive = []
 
-    aggression_players = {"p1": {}, "p2": {}}
-    states = ("early", "mid", "late")
+    for frame in frames:
+        if frame["position"] is None:
+            break
+        position = ast.literal_eval(frame["position"])
+        distance = _distance(position[0], position[1], Map.HEIGHT / Map.WIDTH, c=-Map.HEIGHT)
 
-    for state in states:
-        aggression_players["p1"][state] = _state_aggression(gold_diff=gold_diff["p1"][state],
-                                                            position_ratio=position_ratio["p1"][state],
-                                                            kps=kps["p1"][state], csds=csds["p1"][state],
-                                                            kda=kda["p1"][state])
-        aggression_players["p2"][state] = _state_aggression(gold_diff=gold_diff["p2"][state],
-                                                            position_ratio=position_ratio["p2"][state],
-                                                            kps=kps["p2"][state], csds=csds["p2"][state],
-                                                            kda=kda["p2"][state])
-
-    means = {"p1": {}, "p2": {}}
-    for state in states:
-        means["p1"][state] = np.nanmedian(aggression_players["p1"][state])
-        means["p2"][state] = np.nanmedian(aggression_players["p2"][state])
-
-    # plane equation E: x + y + z = 1; epsilon = 0.05 -> neutral room
-    p1_aggression_min = means["p1"]["early"] + means["p1"]["mid"] + means["p1"]["late"] - 0.9
-    p2_aggression_min = means["p2"]["early"] + means["p2"]["mid"] + means["p2"]["late"] - 0.9
-
-    p1_aggression_max = means["p1"]["early"] + 1.05 * means["p1"]["mid"] + means["p1"]["late"] - 1.1
-    p2_aggression_max = means["p2"]["early"] + 1.05 * means["p2"]["mid"] + means["p2"]["late"] - 1.1
-
-    if p1_aggression_min < 0:
-        aggression_players["p1"]["type"] = {
-            "name": "passive",
-            "value": (means["p1"]["early"], means["p1"]["mid"], means["p1"]["late"])
-        }
-    else:
-        if p1_aggression_max <= 0:
-            aggression_players["p1"]["type"] = {
-                "name": "balanced",
-                "value": (means["p1"]["early"], means["p1"]["mid"], means["p1"]["late"])
-            }
+        if team_id == 100:
+            if distance > 0 + Constants.DIST_EPS:
+                aggressive.append(distance / 8000)
+                passive.append(0)
+            elif distance < 0 - Constants.DIST_EPS:
+                passive.append(abs(distance) / 8000)
+                aggressive.append(0)
         else:
-            aggression_players["p1"]["type"] = {
-                "name": "aggressive",
-                "value": (means["p1"]["early"], means["p1"]["mid"], means["p1"]["late"])
-            }
+            if distance < 0 - Constants.DIST_EPS:
+                aggressive.append(abs(distance) / 8000)
+                passive.append(0)
+            elif distance > 0 + Constants.DIST_EPS:
+                passive.append(distance / 8000)
+                aggressive.append(0)
 
-    if p2_aggression_min < 0:
-        aggression_players["p2"]["type"] = {
-            "name": "passive",
-            "value": (means["p2"]["early"], means["p2"]["mid"], means["p2"]["late"])
-        }
+    return np.average(np.array(aggressive)) + np.average(np.array(passive))
+
+
+def ganking(participant, role, frames, kills):
+    overall = 0
+    ganks = 0
+    for kill in kills:
+        if kill["killer"] == participant or kill["victim"] == participant \
+                or participant in kill["assistingparticipantids"]:
+            kill_position = ast.literal_eval(kill["position"])
+            kill_time = kill["timestamp"] / Constants.TIME
+
+            affected_frames = frames[10 * round(kill_time):10 * round(kill_time) + 9]
+            overall += 1
+            if not _detect_team_fight(kill_time, kill_position, affected_frames):
+                if role == Role.TOP:
+                    gradient = 6712 / 6431
+                    b = -1
+                    c = 5120.93
+                elif role == Role.MID:
+                    gradient = Map.CENTER[1] / Map.CENTER[0]
+                    b = -1
+                    c = 0
+                elif role == Role.BOT or role == Role.SUP:
+                    gradient = 6743 / 6408
+                    b = -1
+                    c = -5797.71
+                else:
+                    # either JGL or unknown role (default: increase)
+                    ganks += 1
+                    break
+                dist = _distance(kill_position[0], kill_position[1], gradient=gradient, b=b, c=c)
+
+                if abs(dist) <= 1000:
+                    ganks += 1
+
+    try:
+        return ganks / overall
+    except ZeroDivisionError:
+        return 0
+
+
+def _detect_team_fight(kill_time, kill_position, time_frames):
+    people = 0
+
+    time_diff = (round(kill_time) - kill_time)
+    radius = Constants.FIGHT_RADIUS + Constants.FIGHT_RADIUS * time_diff * 10
+    for time_frame in time_frames:
+        if time_frame["timestamp"] % round(kill_time) * 60000 < 60000:
+            if time_frame["position"] is None:
+                break
+            position = ast.literal_eval(time_frame["position"])
+            circle_dist = pow(position[0] - kill_position[0], 2) + pow(position[1] - kill_position[1], 2)
+            if circle_dist < pow(radius, 2):
+                people += 1
+
+    if people >= 7:
+        return True
     else:
-        if p2_aggression_max <= 0:
-            aggression_players["p2"]["type"] = {
-                "name": "balanced",
-                "value": (means["p2"]["early"], means["p2"]["mid"], means["p2"]["late"])
-            }
-        else:
-            aggression_players["p2"]["type"] = {
-                "name": "aggressive",
-                "value": (means["p2"]["early"], means["p2"]["mid"], means["p2"]["late"])
-            }
-
-    return aggression_players
+        return False
 
 
-def _state_aggression(gold_diff, position_ratio, kps, csds, kda):
-    position_ratio = np.divide((position_ratio + 1), 2)
+def forward_kills(participant, kills):
+    overall_kills = 0
+    fw_kills = 0
 
-    def pos_kills(pos, kp, kda): return (1 / 2 * (kp + kda)) / (1 + (1 - pos))
+    for kill in kills:
+        if kill["killer"] == participant or participant in kill["assistingparticipantids"]:
+            position = ast.literal_eval(kill["position"])
+            distance = _distance(position[0], position[1], Map.HEIGHT / Map.WIDTH, c=-Map.HEIGHT)
 
-    state_aggression = np.fromiter(
-        (1 / 2 * (pos_kills(position_ratio[idx], kps[idx], kda[idx]) + csds[idx]) * 1 / (1 + (1 - gold_diff[idx]))
-         for idx, gd in enumerate(gold_diff)),
-        gold_diff.dtype,
-        count=len(gold_diff)
-    )
-    return state_aggression.tolist()
+            if kill["teamid"] == 100:
+                if distance > 0 + Constants.DIST_EPS:
+                    fw_kills += 1
+            else:
+                if distance < 0 - Constants.DIST_EPS:
+                    fw_kills += 1
+        overall_kills += 1
 
-
-def kp_per_state(kill_timeline: dict):
-    overall_kills: dict = kill_timeline["overall"]
-    p1_kills = kill_timeline["p1"]
-    p2_kills = kill_timeline["p2"]
-
-    p1_kp = {"early": [], "mid": [], "late": []}
-    p2_kp = {"early": [], "mid": [], "late": []}
-
-    for state, overall_kills in overall_kills.items():
-        for idx, kills in enumerate(overall_kills):
-            try:
-                p1_kp[state].append(len(p1_kills[state][idx]) / len(kills))
-            except ZeroDivisionError:
-                p1_kp[state].append(0)
-            try:
-                p2_kp[state].append(len(p2_kills[state][idx]) / len(kills))
-            except ZeroDivisionError:
-                p2_kp[state].append(0)
-
-    return {
-        "p1": {
-            "early": np.array(p1_kp["early"]),
-            "mid": np.array(p1_kp["mid"]),
-            "late": np.array(p1_kp["late"])
-        },
-        "p2": {
-            "early": np.array(p2_kp["early"]),
-            "mid": np.array(p2_kp["mid"]),
-            "late": np.array(p2_kp["late"])
-        }
-    }
+    try:
+        return fw_kills / overall_kills
+    except ZeroDivisionError:
+        return 0
 
 
-def avg_kp_per_state(kp_state: dict):
-    return {
-        "p1": {
-            "early": np.average(kp_state["p1"]["early"]),
-            "mid": np.average(kp_state["p1"]["mid"]),
-            "late": np.average(kp_state["p1"]["late"])
-        },
-        "p2": {
-            "early": np.average(kp_state["p2"]["early"]),
-            "mid": np.average(kp_state["p2"]["mid"]),
-            "late": np.average(kp_state["p2"]["late"])
-        }
-    }
-
-
-def positioning(positions, player_info):
-    shift = {"early": 0, "mid": 4000, "late": 8000}
-
-    # np.nanmean prints a runtime warning for empty slices. does not effect execution
-    early_positions = np.nanmean(positions[:, GameState.EARLY[0]:GameState.EARLY[1]], 1)
-    mid_positions = np.nanmean(positions[:, GameState.MID[0]:GameState.MID[1]], 1)
-    late_positions = np.nanmean(positions[:, GameState.LATE[0]:GameState.LATE[1]], 1)
-
-    early_distances = _distance_ratios(positions=early_positions, player_info=player_info, shift=shift["early"])
-    mid_distances = _distance_ratios(positions=mid_positions, player_info=player_info, shift=shift["mid"])
-    late_distances = _distance_ratios(positions=late_positions, player_info=player_info, shift=shift["late"])
-
-    return {
-        "early": early_distances,
-        "mid": mid_distances,
-        "late": late_distances
-    }
-
-
-def _distance_ratios(positions, player_info, shift):
-    sqrt_2 = math.sqrt(2)
-
-    def gradient(t, w): return 16000 + ((math.pow(-1, t / 100) * math.pow(-1, w)) * shift)
-
-    def scale(t, w): return sqrt_2 / (32000 - abs(gradient(t, w)))
-
-    def distance(x, y, t, w): return (x + y - gradient(t, w)) / sqrt_2
-
-    return np.fromiter(
-        (distance(avg[0], avg[1], player_info[idx][2], player_info[idx][3]) * scale(player_info[idx][2],
-                                                                                    player_info[idx][3])
-         for idx, avg in enumerate(positions)),
-        positions.dtype,
-        count=len(positions))
+def _distance(x, y, gradient, b=1, c=1):
+    norm = math.sqrt(pow(gradient, 2) + pow(b, 2))
+    return (gradient * x + b * y + c) / norm
