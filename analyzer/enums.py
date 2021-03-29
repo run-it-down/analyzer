@@ -14,6 +14,7 @@ class Map:
     WIDTH = 14870
     HEIGHT = 14980
     CENTER = (7435, 7490)
+    HALF_DIST = 10553.64
 
 
 class Role:

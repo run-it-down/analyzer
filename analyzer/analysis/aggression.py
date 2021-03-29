@@ -23,20 +23,20 @@ def positioning(team_id, frames):
 
         if team_id == 100:
             if distance > 0 + Constants.DIST_EPS:
-                aggressive.append(distance / 8000)
+                aggressive.append(distance / Map.HALF_DIST)
                 passive.append(0)
             elif distance < 0 - Constants.DIST_EPS:
-                passive.append(abs(distance) / 8000)
+                passive.append(abs(distance) / Map.HALF_DIST)
                 aggressive.append(0)
         else:
             if distance < 0 - Constants.DIST_EPS:
-                aggressive.append(abs(distance) / 8000)
+                aggressive.append(abs(distance) / Map.HALF_DIST)
                 passive.append(0)
             elif distance > 0 + Constants.DIST_EPS:
-                passive.append(distance / 8000)
+                passive.append(distance / Map.HALF_DIST)
                 aggressive.append(0)
 
-    return np.average(np.array(aggressive)) + np.average(np.array(passive))
+    return (np.average(np.array(aggressive)) + (1 - np.average(np.array(passive)))) / 2
 
 
 def ganking(participant, role, frames, kills):

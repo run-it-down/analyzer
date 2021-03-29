@@ -16,6 +16,8 @@ def create():
     api.add_route('/combinations/champions', views.CombinationMetrics.ChampionCombinations())
     api.add_route('/aggression', views.AggressionMetrics.Aggression())
 
+    api.add_route('/average/aggression', views.Averages.AverageAggression())
+
     logger.info('falcon initialized')
 
     conn = database.get_connection()
@@ -26,6 +28,3 @@ def create():
 
 
 application = create()
-
-import waitress
-waitress.serve(application, host="localhost", port="2000")
