@@ -15,6 +15,8 @@ def create():
     api.add_route('/cs', views.BaseMetrics.CreepScore())
     api.add_route('/combinations/champions', views.CombinationMetrics.ChampionCombinations())
     api.add_route('/aggression', views.AggressionMetrics.Aggression())
+    api.add_route('/avg-role', views.BaseMetrics.AverageRole())
+    api.add_route('/gold-diff', views.BaseMetrics.GoldDifference())
 
     logger.info('falcon initialized')
 
@@ -26,6 +28,3 @@ def create():
 
 
 application = create()
-
-import waitress
-waitress.serve(application, host="localhost", port="2000")

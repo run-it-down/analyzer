@@ -1,141 +1,11 @@
+import math
+
 import numpy as np
 
 import database
 import model
-
-
-def get_win_rate(common_games, conn):
-    wins_total = 0
-    for game in common_games:
-        stat = database.select_stats(conn=conn, statid=game[3])
-        wins_total += int(stat.win)
-
-    return wins_total / len(common_games)
-
-
-def get_kda(common_games, conn):
-    """
-    Calculate the kills and assists to deaths ratio for a given summoner.
-
-    KDA = (sum(kills) + sum(assists)) / sum(deaths)
-
-    :param common_games:
-    :param conn: database connection
-    :return: calculated kda, either >= 0 or -1 (perfect KDA)
-    """
-    kda_object = {
-        "summoner1": {
-            "kills": 0,
-            "deaths": 0,
-            "assists": 0
-        },
-        "summoner2": {
-            "kills": 0,
-            "deaths": 0,
-            "assists": 0
-        }
-    }
-
-    for game in common_games:
-        stat_summoner1 = database.select_stats(conn=conn, statid=game[3])
-        stat_summoner2 = database.select_stats(conn=conn, statid=game[6])
-        kda_object["summoner1"]["kills"] += stat_summoner1.kills
-        kda_object["summoner1"]["deaths"] += stat_summoner1.deaths
-        kda_object["summoner1"]["assists"] += stat_summoner1.assists
-        kda_object["summoner2"]["kills"] += stat_summoner2.kills
-        kda_object["summoner2"]["deaths"] += stat_summoner2.deaths
-        kda_object["summoner2"]["assists"] += stat_summoner2.assists
-
-    kda = {}
-    try:
-        kda["summoner1"] = (kda_object["summoner1"]["kills"] + kda_object["summoner1"]["assists"]) / \
-                           kda_object["summoner1"]["deaths"]
-    except ZeroDivisionError:
-        kda_object["summoner1"] = -1
-
-    try:
-        kda["summoner2"] = (kda_object["summoner2"]["kills"] + kda_object["summoner2"]["assists"]) / \
-                           kda_object["summoner2"]["deaths"]
-    except ZeroDivisionError:
-        kda["summoner2"] = -1
-
-    return kda
-
-
-def get_creep_score(common_games, conn):
-    cs = {
-        "summoner1": {
-            "avg": 0.,
-            "lanes": {"TOP": 0, "JUNGLE": 0, "MIDDLE": 0, "ADC": 0, "SUPPORT": 0}
-        },
-        "summoner2": {
-            "avg": 0.,
-            "lanes": {"TOP": 0, "JUNGLE": 0, "MIDDLE": 0, "ADC": 0, "SUPPORT": 0}
-        }
-    }
-    counter = {
-        "summoner1": {"TOP": 1, "JUNGLE": 1, "MIDDLE": 1, "ADC": 1, "SUPPORT": 1},
-        "summoner2": {"TOP": 1, "JUNGLE": 1, "MIDDLE": 1, "ADC": 1, "SUPPORT": 1}
-    }
-
-    for index, game in enumerate(common_games):
-        stat_summoner1 = database.select_stats(conn=conn, statid=game[3])
-        stat_summoner2 = database.select_stats(conn=conn, statid=game[6])
-        participant1 = database.select_participant(conn=conn, participant_id=game[2])
-        participant2 = database.select_participant(conn=conn, participant_id=game[5])
-
-        cs["summoner1"]["avg"] += (stat_summoner1.total_minions_killed - cs["summoner1"]["avg"]) / (index + 1)
-        cs["summoner2"]["avg"] += (stat_summoner2.total_minions_killed - cs["summoner2"]["avg"]) / (index + 1)
-
-        lane = participant1.lane
-        if participant1.lane in ("BOTTOM", "NONE"):
-            if participant1.role == "DUO_SUPPORT":
-                lane = "SUPPORT"
-            else:
-                lane = "ADC"
-        cs["summoner1"]["lanes"][lane] += (stat_summoner1.total_minions_killed - cs["summoner1"]["lanes"][lane]) / counter["summoner1"][lane]
-
-        lane = participant2.lane
-        if participant2.lane in ("BOTTOM", "NONE"):
-            if participant2.role == "DUO_SUPPORT":
-                lane = "SUPPORT"
-            else:
-                lane = "ADC"
-        cs["summoner2"]["lanes"][lane] += (stat_summoner2.total_minions_killed - cs["summoner2"]["lanes"][lane]) / counter["summoner2"][lane]
-
-    return cs
-
-
-def get_gold_difference(gold_diffs):
-    p1_gold_diff: np.ndarray = gold_diffs["p1"]
-    p2_gold_diff: np.ndarray = gold_diffs["p2"]
-    means = {
-        "p1": p1_gold_diff.mean(axis=0).tolist(),
-        "p2": p2_gold_diff.mean(axis=0).tolist()
-    }
-    return means
-
-
-def get_kp_per_game(kill_information):
-    overall_kill_info: np.ndarray = kill_information["overall"]
-    p1_kill_info: np.ndarray = kill_information["p1"]
-    p2_kill_info: np.ndarray = kill_information["p2"]
-
-    kp = {
-        "p1": (p1_kill_info[:, 0] + p1_kill_info[:, 2]) / overall_kill_info[:, 0],
-        "p2": (p2_kill_info[:, 0] + p2_kill_info[:, 2]) / overall_kill_info[:, 0]
-    }
-
-    return kp
-
-
-def get_average_kp(kp_game):
-    avg_kp = {
-        "p1": np.average(kp_game["p1"]),
-        "p2": np.average(kp_game["p2"])
-    }
-
-    return avg_kp
+import util
+from enums import Role, GameState
 
 
 def kill_participation(participant: str, kills):
@@ -151,3 +21,71 @@ def kill_participation(participant: str, kills):
         return summoner_kp / overall_kills
     except ZeroDivisionError:
         return 0
+
+
+def game_kda(stat):
+    try:
+        return (stat["kills"] + stat["assists"]) / stat["deaths"]
+    except ZeroDivisionError:
+        return "Perfect KDA"
+
+
+def avg_kda(kills, deaths, assists):
+    try:
+        return (kills + assists) / deaths
+    except ZeroDivisionError:
+        return "Perfect KDA"
+
+
+def win_rate(games):
+    wins_total = 0
+    for game in games:
+        wins_total += 1 if game["win"] == "Win" else 0
+    try:
+        return wins_total / len(games)
+    except ZeroDivisionError:
+        return 0
+
+
+def determine_avg_role(games, role_key, lane_key):
+    roles = []
+    mapping = {
+        Role.TOP: 1, Role.JGL: 2, Role.MID: 3, Role.BOT: 4, Role.SUP: 5
+    }
+    for game in games:
+        lane = util.get_canonic_lane(lane=game[lane_key], role=game[role_key])
+        if lane is not None:
+            roles.append(mapping[lane])
+    avg_role = np.median(np.array(roles))
+
+    if avg_role is np.NaN:
+        return "None"
+    role_keys = list(mapping.keys())
+    if avg_role - int(avg_role) != 0:
+        return role_keys[math.floor(avg_role) - 1], role_keys[math.ceil(avg_role) - 1]
+    return role_keys[int(avg_role) - 1]
+
+
+def gold_diff(frames, opponent_frames):
+    diff = {
+        "overall": [],
+        "early": [],
+        "mid": [],
+        "late": []
+    }
+    for idx, frame in enumerate(frames):
+        gd = frame["totalgold"] - opponent_frames[idx]["totalgold"]
+        if idx <= GameState.EARLY[1]:
+            diff["early"].append(gd)
+        elif GameState.MID[0] <= idx <= GameState.MID[1]:
+            diff["mid"].append(gd)
+        elif GameState.LATE[0] <= idx <= GameState.LATE[1]:
+            diff["late"].append(gd)
+        diff["overall"].append(gd)
+
+    diff["overall"] = np.average(np.array(diff["overall"]))
+    diff["early"] = np.average(np.array(diff["early"]))
+    diff["mid"] = np.average(np.array(diff["mid"]))
+    diff["late"] = np.average(np.array(diff["late"]))
+
+    return diff
