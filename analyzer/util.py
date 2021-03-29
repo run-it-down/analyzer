@@ -4,6 +4,8 @@ from string import Template
 import sys
 import threading
 
+from enums import Role
+
 
 def urljoin(*parts):
     if len(parts) == 1:
@@ -21,12 +23,14 @@ def urljoin(*parts):
 
 def get_canonic_lane(lane: str, role: str):
     role_mapping = {
-        ("MIDDLE", "SOLO"): "MIDDLE",
-        ("TOP", "SOLO"): "TOP",
-        ("JUNGLE", "NONE"): "JUNGLE",
-        ("BOTTOM", "DUO_CARRY"): "BOTTOM",
-        ("BOTTOM", "SOLO"): "BOTTOM",
-        ("BOTTOM", "DUO_SUPPORT"): "SUPPORT"
+        ("MIDDLE", "SOLO"): Role.MID,
+        ("TOP", "SOLO"): Role.TOP,
+        ("JUNGLE", "NONE"): Role.JGL,
+        ("BOTTOM", "DUO_CARRY"): Role.BOT,
+        ("BOTTOM", "SOLO"): Role.BOT,
+        ("BOTTOM", "DUO_SUPPORT"): Role.SUP,
+        ("MIDDLE", "DUO"): Role.MID,
+        ("NONE", "DUO_SUPPORT"): Role.SUP,
     }
     try:
         return role_mapping[(lane, role)]

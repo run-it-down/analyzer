@@ -1,7 +1,7 @@
 class GameState:
-    EARLY = (0, 15)
-    MID = (16, 25)
-    LATE = (26, 100)
+    EARLY = (0, 10)
+    MID = (11, 20)
+    LATE = (21, 100)
 
 
 class Constants:
