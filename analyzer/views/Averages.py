@@ -53,3 +53,53 @@ class AverageAggression:
         stats["ganking"] = np.nanmean(np.array(stats["ganking"]))
 
         resp.body = json.dumps(stats)
+
+
+class AverageBasics:
+    def on_get(self, req, resp):
+        logger.info("GET /average/aggression")
+        conn = database.get_connection()
+        games = database.select_all_games(conn=conn)
+
+        wr = analysis.base_analysis.win_rate(games)
+
+        kda = {"kills": 0, "deaths": 0, "assists": 0}
+        cs = 0
+        gold_diff = {"overall": [], "early": [], "mid": [], "late": []}
+
+        for game in games:
+            stats = database.select_stats(conn=conn, statid=game["s1_statid"])
+            kda["kills"] += stats.kills
+            kda["deaths"] += stats.deaths
+            kda["assists"] += stats.assists
+
+            cs += stats.total_minions_killed
+
+            p1_frames = database.select_participant_frames(conn=conn, participant_id=game["s1_participantid"])
+            p1_opponent = database.select_opponent(
+                conn=conn,
+                participant_id=game["s1_participantid"],
+                game_id=game["gameid"],
+                position=(game["s1_lane"], game["s1_role"])
+            )
+            if p1_opponent is not None:
+                p1_opponent_frames = database.select_participant_frames(conn=conn,
+                                                                        participant_id=p1_opponent.participant_id)
+                if len(p1_opponent_frames) > 0:
+                    p1_gold_diff = analysis.base_analysis.gold_diff(frames=p1_frames, opponent_frames=p1_opponent_frames)
+                    gold_diff["overall"].append(p1_gold_diff["overall"])
+                    gold_diff["early"].append(p1_gold_diff["early"])
+                    gold_diff["mid"].append(p1_gold_diff["mid"])
+                    gold_diff["late"].append(p1_gold_diff["late"])
+
+        gold_diff["overall"] = np.nanmean(np.array(gold_diff["overall"]))
+        gold_diff["early"] = np.nanmean(np.array(gold_diff["early"]))
+        gold_diff["mid"] = np.nanmean(np.array(gold_diff["mid"]))
+        gold_diff["late"] = np.nanmean(np.array(gold_diff["late"]))
+
+        resp.body = json.dumps({
+            "win_rate": wr,
+            "kda": analysis.base_analysis.avg_kda(kda["kills"], kda["deaths"], kda["assists"]),
+            "cs": cs / len(games),
+            "gold_diff": gold_diff
+        })

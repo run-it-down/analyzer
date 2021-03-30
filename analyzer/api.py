@@ -19,6 +19,7 @@ def create():
     api.add_route('/gold-diff', views.BaseMetrics.GoldDifference())
 
     api.add_route('/average/aggression', views.Averages.AverageAggression())
+    api.add_route('/average/basics', views.Averages.AverageBasics())
 
     logger.info('falcon initialized')
 
