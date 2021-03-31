@@ -18,7 +18,7 @@ class AverageAggression:
         games = database.select_all_games(conn=conn)
 
         stats = {
-            "kp": [], "fw_kills": [], "positioning": [], "ganking": []
+            "kp": [], "fw_kills": [], "positioning": [], "ganking": [], "aggression": 0
         }
 
         for game in games:
@@ -51,6 +51,8 @@ class AverageAggression:
         stats["fw_kills"] = np.nanmean(np.array(stats["fw_kills"]))
         stats["positioning"] = np.nanmean(np.array(stats["positioning"]))
         stats["ganking"] = np.nanmean(np.array(stats["ganking"]))
+
+        stats["aggression"] = analysis.aggression.aggression(stats["kp"], stats["fw_kills"], stats["positioning"], stats["ganking"])
 
         resp.body = json.dumps(stats)
 

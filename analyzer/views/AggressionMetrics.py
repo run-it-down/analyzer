@@ -6,7 +6,6 @@ import analysis
 import database
 import util
 
-
 logger = util.Logger(__name__)
 
 
@@ -26,9 +25,11 @@ class Aggression:
 
         stats = {
             summoner1.name: {
+                "aggression": 0,
                 "kp": [], "fw_kills": [], "positioning": [], "ganking": []
             },
             summoner2.name: {
+                "aggression": 0,
                 "kp": [], "fw_kills": [], "positioning": [], "ganking": []
             }
         }
@@ -93,5 +94,18 @@ class Aggression:
         stats[summoner2.name]["fw_kills"] = np.average(np.array(stats[summoner2.name]["fw_kills"]))
         stats[summoner2.name]["positioning"] = np.average(np.array(stats[summoner2.name]["positioning"]))
         stats[summoner2.name]["ganking"] = np.average(np.array(stats[summoner2.name]["ganking"]))
+
+        stats[summoner1.name]["aggression"] = analysis.aggression.aggression(
+            kp=stats[summoner1.name]["kp"],
+            fw_kills=stats[summoner1.name]["fw_kills"],
+            pos=stats[summoner1.name]["positioning"],
+            ganking=stats[summoner1.name]["ganking"],
+        )
+        stats[summoner2.name]["aggression"] = analysis.aggression.aggression(
+            kp=stats[summoner2.name]["kp"],
+            fw_kills=stats[summoner2.name]["fw_kills"],
+            pos=stats[summoner2.name]["positioning"],
+            ganking=stats[summoner2.name]["ganking"],
+        )
 
         resp.body = json.dumps(stats)

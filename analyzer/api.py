@@ -31,3 +31,6 @@ def create():
 
 
 application = create()
+
+from waitress import serve
+serve(application, port=2000)
