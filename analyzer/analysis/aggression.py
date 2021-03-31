@@ -2,13 +2,25 @@ import ast
 import math
 
 import numpy as np
+import scipy.stats as stats
+from scipy.integrate import quad
 
-from enums import GameState, Constants, Role, Map
+from enums import GameState, Constants, Role, Map, KP, FightType, FWK, POS, Ganking
 import util
 
 logger = util.Logger(__name__)
 # epsilon - "neutral" region
 EPSILON = 1000
+
+
+def aggression(kp, fw_kills, pos, ganking):
+    kp_val = stats.norm.cdf(kp, KP.MU, KP.SIG)
+    fwk_val = stats.expon.cdf(fw_kills, scale=FWK.MU)
+    pos_val = stats.norm.cdf(pos, POS.MU, POS.SIG)
+    gank_val = stats.expon.cdf(ganking, scale=Ganking.MU)
+
+    aggro = (kp_val + fwk_val + pos_val + gank_val) / 4
+    return util.normalize(aggro, -2, 2)
 
 
 def positioning(team_id, frames):
@@ -39,6 +51,11 @@ def positioning(team_id, frames):
     return (np.average(np.array(aggressive)) + (1 - np.average(np.array(passive)))) / 2
 
 
+def ss_positioning(team_id, frames):
+    pos = positioning(team_id, frames)
+    return (pos - POS.MU) / POS.SIG
+
+
 def ganking(participant, role, frames, kills):
     overall = 0
     ganks = 0
@@ -50,41 +67,53 @@ def ganking(participant, role, frames, kills):
 
             affected_frames = frames[10 * round(kill_time):10 * round(kill_time) + 9]
             overall += 1
-            if not _detect_team_fight(kill_time, kill_position, affected_frames):
+            if _detect_fight_type(kill_time, kill_position, affected_frames) == FightType.GANK:
                 if role == Role.TOP:
                     gradient = 6712 / 6431
                     b = -1
                     c = 5120.93
+                    d = 1
                 elif role == Role.MID:
                     gradient = Map.CENTER[1] / Map.CENTER[0]
                     b = -1
                     c = 0
+                    d= 0
                 elif role == Role.BOT or role == Role.SUP:
                     gradient = 6743 / 6408
                     b = -1
                     c = -5797.71
+                    d = -1
                 else:
                     # either JGL or unknown role (default: increase)
                     ganks += 1
                     break
                 dist = _distance(kill_position[0], kill_position[1], gradient=gradient, b=b, c=c)
 
-                if abs(dist) <= 1000:
-                    ganks += 1
+                if role == Role.MID:
+                    if abs(dist) >= 1000:
+                        ganks += 1
+                else:
+                    if dist * d >= 1000:
+                        ganks += 1
 
     try:
         return ganks / overall
     except ZeroDivisionError:
-        return 0
+        return np.NaN
 
 
-def _detect_team_fight(kill_time, kill_position, time_frames):
+def ss_ganking(participant, role, frames, kills):
+    gank = ganking(participant, role, frames, kills)
+    return (gank - Ganking.MU) / Ganking.SIG
+
+
+def _detect_fight_type(kill_time, kill_position, time_frames):
     people = 0
 
-    time_diff = (round(kill_time) - kill_time)
-    radius = Constants.FIGHT_RADIUS + Constants.FIGHT_RADIUS * time_diff * 10
+    time_diff = abs((round(kill_time) - kill_time))
+    radius = Constants.FIGHT_RADIUS + Constants.FIGHT_RADIUS * time_diff
     for time_frame in time_frames:
-        if time_frame["timestamp"] % round(kill_time) * 60000 < 60000:
+        if time_frame["timestamp"] % (round(kill_time) * 60000) < 60000:
             if time_frame["position"] is None:
                 break
             position = ast.literal_eval(time_frame["position"])
@@ -92,10 +121,14 @@ def _detect_team_fight(kill_time, kill_position, time_frames):
             if circle_dist < pow(radius, 2):
                 people += 1
 
+    if people <= 3:
+        return FightType.SOLO
+    if 3 < people < 7:
+        return FightType.GANK
     if people >= 7:
-        return True
+        return FightType.TEAM_FIGHT
     else:
-        return False
+        return None
 
 
 def forward_kills(participant, kills):
@@ -119,6 +152,11 @@ def forward_kills(participant, kills):
         return fw_kills / overall_kills
     except ZeroDivisionError:
         return 0
+
+
+def ss_forward_kills(participant, kills):
+    fw_kill = forward_kills(participant, kills)
+    return (fw_kill - FWK.MU) / FWK.SIG
 
 
 def _distance(x, y, gradient, b=1, c=1):

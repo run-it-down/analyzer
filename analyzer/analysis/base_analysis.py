@@ -20,7 +20,7 @@ def kill_participation(participant: str, kills):
     try:
         return summoner_kp / overall_kills
     except ZeroDivisionError:
-        return 0
+        return np.NaN
 
 
 def game_kda(stat):

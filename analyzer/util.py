@@ -38,17 +38,8 @@ def get_canonic_lane(lane: str, role: str):
         return None
 
 
-def normalize(a: np.ndarray):
-    return (a - np.nanmin(a)) / (np.nanmax(a) - np.nanmin(a))
-
-
-def normalize_arr(a: []):
-    arr = np.array(a)
-    return normalize(arr)
-
-
-def cust_normalize(a: np.ndarray, min, max):
-    return (a - min) / (max - min)
+def normalize(value, min_val, max_val):
+    return (value - min_val) / (max_val - min_val)
 
 
 class Logger:
