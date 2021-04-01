@@ -72,4 +72,3 @@ jobs:
             sudo docker rm run-it-down-analyzer
             sudo docker pull ghcr.io/run-it-down/analyzer:latest
             sudo docker run -dit --name run-it-down-analyzer --net host ghcr.io/run-it-down/analyzer:latest
-
