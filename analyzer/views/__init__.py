@@ -1,1 +1,1 @@
-from views import BaseMetrics, CombinationMetrics, AggressionMetrics, Averages
+from views import BaseMetrics, CombinationMetrics, AggressionMetrics, Averages, Classification

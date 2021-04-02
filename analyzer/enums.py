@@ -56,3 +56,15 @@ class Ganking:
     MU = 0.5900199271514704
     VAR = 0.035544521958908885
     SIG = math.sqrt(VAR)
+
+
+class GoldDiffAll:
+    MU = -6.4687039202140415
+    VAR = 1402883.5392955246
+    SIG = math.sqrt(VAR)
+
+
+class GoldShare:
+    MU = 0.1624007060900265
+    VAR = 0.0035407442776697806
+    SIG = math.sqrt(VAR)
