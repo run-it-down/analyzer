@@ -17,9 +17,11 @@ def create():
     api.add_route('/aggression', views.AggressionMetrics.Aggression())
     api.add_route('/avg-role', views.BaseMetrics.AverageRole())
     api.add_route('/gold-diff', views.BaseMetrics.GoldDifference())
+    api.add_route('/classification/millionaire', views.Classification.Millionaire())
 
     api.add_route('/average/aggression', views.Averages.AverageAggression())
     api.add_route('/average/basics', views.Averages.AverageBasics())
+    api.add_route('/average/millionaire', views.Averages.MillionaireAverage())
 
     logger.info('falcon initialized')
 
@@ -31,6 +33,3 @@ def create():
 
 
 application = create()
-
-from waitress import serve
-serve(application, port=2000)

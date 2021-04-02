@@ -2,8 +2,6 @@ import math
 
 import numpy as np
 
-import database
-import model
 import util
 from enums import Role, GameState
 
@@ -89,3 +87,7 @@ def gold_diff(frames, opponent_frames):
     diff["late"] = np.average(np.array(diff["late"]))
 
     return diff
+
+
+def gold_share(p_gold, team_gold):
+    return p_gold / team_gold
