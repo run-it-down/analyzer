@@ -74,3 +74,9 @@ class WinRate:
     MU = 0.5
     VAR = 1/36
     SIG = math.sqrt(VAR)
+
+
+class KDA:
+    MU = 2.443817906752854
+    VAR = 11.433985584080357
+    SIG = math.sqrt(VAR)

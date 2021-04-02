@@ -3,7 +3,7 @@ import math
 import numpy as np
 
 import util
-from enums import Role, GameState
+from enums import Role, GameState, KP
 
 
 def kill_participation(participant: str, kills):
@@ -25,14 +25,19 @@ def game_kda(stat):
     try:
         return (stat["kills"] + stat["assists"]) / stat["deaths"]
     except ZeroDivisionError:
-        return "Perfect KDA"
+        return np.NaN
+
+
+def ss_kill_participation(participant: str, kills):
+    kp = kill_participation(participant, kills)
+    return (kp - KP.MU) / KP.SIG
 
 
 def avg_kda(kills, deaths, assists):
     try:
         return (kills + assists) / deaths
     except ZeroDivisionError:
-        return "Perfect KDA"
+        return np.NaN
 
 
 def win_rate(games):
@@ -42,7 +47,7 @@ def win_rate(games):
     try:
         return wins_total / len(games)
     except ZeroDivisionError:
-        return 0
+        return np.Inf
 
 
 def determine_avg_role(games, role_key, lane_key):

@@ -112,3 +112,55 @@ class MatchType:
             resp.body = json.dumps({
                 "type": "Average Fit"
             })
+
+
+class MurderousDuo:
+    def on_get(self, req, resp):
+        logger.info("GET /average/aggression")
+        conn = database.get_connection()
+
+        params = req.params
+        summoner1 = database.select_summoner(conn=conn,
+                                             summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn,
+                                             summoner_name=params["summoner2"])
+        common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+
+        murderous_stats = {
+            summoner1.name: {"kp": [], "kda": []},
+            summoner2.name: {"kp": [], "kda": []}
+        }
+        for game in common_games:
+            team_kills = database.select_kill_timeline(conn=conn, game_id=game["gameid"], team_id=game["s1_teamid"])
+            p1_stats = database.select_stats(conn=conn, statid=game["s1_statid"])
+            p2_stats = database.select_stats(conn=conn, statid=game["s2_statid"])
+
+            # Kill Participation
+            murderous_stats[summoner1.name]["kp"].append(analysis.base_analysis.kill_participation(
+                participant=game["s1_participantid"],
+                kills=team_kills,
+            ))
+            murderous_stats[summoner2.name]["kp"].append(analysis.base_analysis.kill_participation(
+                participant=game["s2_participantid"],
+                kills=team_kills,
+            ))
+
+            murderous_stats[summoner1.name]["kda"].append(analysis.base_analysis.game_kda({
+                "kills": p1_stats.kills, "deaths": p1_stats.deaths, "assists": p1_stats.assists
+            }))
+            murderous_stats[summoner2.name]["kda"].append(analysis.base_analysis.game_kda({
+                "kills": p2_stats.kills, "deaths": p2_stats.deaths, "assists": p2_stats.assists
+            }))
+
+        murderous = analysis.classification.classify_murderous_duo(
+            p1_kp=np.nanmean(murderous_stats[summoner1.name]["kp"]),
+            p2_kp=np.nanmean(murderous_stats[summoner2.name]["kp"]),
+            p1_kda=np.nanmean(murderous_stats[summoner1.name]["kda"]),
+            p2_kda=np.nanmean(murderous_stats[summoner2.name]["kda"]),
+        )
+
+        resp.body = json.dumps({
+            "cluster_centre": murderous["cluster_centre"],
+            summoner1.name: murderous["1"],
+            summoner2.name: murderous["2"],
+        })
