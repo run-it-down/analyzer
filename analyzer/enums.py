@@ -68,3 +68,9 @@ class GoldShare:
     MU = 0.1624007060900265
     VAR = 0.0035407442776697806
     SIG = math.sqrt(VAR)
+
+
+class WinRate:
+    MU = 0.5
+    VAR = 1/36
+    SIG = math.sqrt(VAR)

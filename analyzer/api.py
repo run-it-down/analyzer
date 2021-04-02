@@ -18,10 +18,12 @@ def create():
     api.add_route('/avg-role', views.BaseMetrics.AverageRole())
     api.add_route('/gold-diff', views.BaseMetrics.GoldDifference())
     api.add_route('/classification/millionaire', views.Classification.Millionaire())
+    api.add_route('/classification/match-type', views.Classification.MatchType())
 
     api.add_route('/average/aggression', views.Averages.AverageAggression())
     api.add_route('/average/basics', views.Averages.AverageBasics())
     api.add_route('/average/millionaire', views.Averages.MillionaireAverage())
+    api.add_route('/average/win-rate', views.Averages.AverageWinRate())
 
     logger.info('falcon initialized')
 

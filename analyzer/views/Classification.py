@@ -85,3 +85,30 @@ class Millionaire:
                 "value": p2_avg.tolist()
             }
         })
+
+
+class MatchType:
+    def on_get(self, req, resp):
+        logger.info("GET /average/aggression")
+        conn = database.get_connection()
+
+        params = req.params
+        summoner1 = database.select_summoner(conn=conn,
+                                             summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn,
+                                             summoner_name=params["summoner2"])
+        common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+
+        wr = analysis.base_analysis.win_rate(games=common_games)
+        if wr >= enums.WinRate.MU + enums.WinRate.SIG:
+            resp.body = json.dumps({
+                "type": "Perfect Match"
+            })
+        elif wr <= enums.WinRate.MU - enums.WinRate.SIG:
+            resp.body = json.dumps({
+                "type": "Mismatch"
+            })
+        else:
+            resp.body = json.dumps({
+                "type": "Average Fit"
+            })
