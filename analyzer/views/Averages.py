@@ -99,12 +99,6 @@ class AverageBasics:
                     gold_diff["mid"].append(p1_gold_diff["mid"])
                     gold_diff["late"].append(p1_gold_diff["late"])
 
-        f = open("./gd.txt", 'w')
-        for gd in gold_diff["overall"]:
-            f.write(f"{gd} \n")
-        f.flush()
-        f.close()
-
         gold_diff["overall"] = np.nanmean(np.array(gold_diff["overall"]))
         gold_diff["early"] = np.nanmean(np.array(gold_diff["early"]))
         gold_diff["mid"] = np.nanmean(np.array(gold_diff["mid"]))
@@ -160,4 +154,24 @@ class MillionaireAverage:
         resp.body = json.dumps({
             "0": centres[0],
             "1": centres[1]
+        })
+
+
+class AverageWinRate:
+    def on_get(self, req, resp):
+        """Calculates classification model for Millionaire class."""
+        logger.info("GET /average/win-rate")
+        conn = database.get_connection()
+
+        summoners = database.select_all_summoners(conn=conn)
+        rates = []
+
+        for summoner in summoners:
+            games = database.select_summoner_games(conn=conn, account_id=summoner["accountid"])
+            if len(games) > 2:
+                wr = analysis.base_analysis.win_rate(games)
+                rates.append(wr)
+
+        resp.body = json.dumps({
+            "wr": np.nanmean(rates)
         })
