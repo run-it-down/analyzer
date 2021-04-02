@@ -17,13 +17,17 @@ def create():
     api.add_route('/aggression', views.AggressionMetrics.Aggression())
     api.add_route('/avg-role', views.BaseMetrics.AverageRole())
     api.add_route('/gold-diff', views.BaseMetrics.GoldDifference())
+
     api.add_route('/classification/millionaire', views.Classification.Millionaire())
     api.add_route('/classification/match-type', views.Classification.MatchType())
+    api.add_route('/classification/murderous-duo', views.Classification.MurderousDuo())
 
     api.add_route('/average/aggression', views.Averages.AverageAggression())
     api.add_route('/average/basics', views.Averages.AverageBasics())
-    api.add_route('/average/millionaire', views.Averages.MillionaireAverage())
     api.add_route('/average/win-rate', views.Averages.AverageWinRate())
+
+    api.add_route('/model/millionaire', views.ClassificationModel.MillionaireModel())
+    api.add_route('/model/murderous-duo', views.ClassificationModel.MurderousDuoModel())
 
     logger.info('falcon initialized')
 
@@ -35,3 +39,6 @@ def create():
 
 
 application = create()
+
+import waitress
+waitress.serve(application, port=2000)
