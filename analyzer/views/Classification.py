@@ -1,4 +1,6 @@
+import ast
 import json
+import math
 import pickle
 
 import numpy as np
@@ -14,7 +16,7 @@ logger = util.Logger(__name__)
 
 class Millionaire:
     def on_get(self, req, resp):
-        logger.info("GET /average/aggression")
+        logger.info("GET /classification/millionaire")
         conn = database.get_connection()
 
         params = req.params
@@ -89,7 +91,7 @@ class Millionaire:
 
 class MatchType:
     def on_get(self, req, resp):
-        logger.info("GET /average/aggression")
+        logger.info("GET /classification/match-type")
         conn = database.get_connection()
 
         params = req.params
@@ -116,7 +118,7 @@ class MatchType:
 
 class MurderousDuo:
     def on_get(self, req, resp):
-        logger.info("GET /average/aggression")
+        logger.info("GET /classification/murderous-duo")
         conn = database.get_connection()
 
         params = req.params
@@ -164,3 +166,56 @@ class MurderousDuo:
             summoner1.name: murderous["1"],
             summoner2.name: murderous["2"],
         })
+
+
+class DuoType:
+    def on_get(self, req, resp):
+        logger.info("GET /classification/duo-type")
+        conn = database.get_connection()
+
+        params = req.params
+        summoner1 = database.select_summoner(conn=conn,
+                                             summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn,
+                                             summoner_name=params["summoner2"])
+        common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+
+        arr_spent = []
+        for game in common_games:
+            p1_frames = database.select_participant_frames(conn=conn, participant_id=game["s1_participantid"])
+            p2_frames = database.select_participant_frames(conn=conn, participant_id=game["s2_participantid"])
+
+            together = 0
+            for idx, p1_frame in enumerate(p1_frames):
+                if p1_frame["position"] is None:
+                    continue
+                if p2_frames[idx]["position"] is None:
+                    continue
+                p1_pos = ast.literal_eval(p1_frame["position"])
+                p2_pos = ast.literal_eval(p2_frames[idx]["position"])
+                distance = abs(math.sqrt(math.pow(p1_pos[0] - p2_pos[0], 2) + math.pow(p1_pos[1] - p2_pos[1], 2)))
+
+                if distance <= 1000:
+                    together += 1
+            try:
+                spent_together = together / len(p1_frames)
+            except ZeroDivisionError:
+                spent_together = 0
+            arr_spent.append(spent_together)
+
+        time_spent = np.average(np.array(arr_spent))
+        if time_spent >= 2/3:
+            resp.body = json.dumps({
+                "pct_spent_together": time_spent,
+                "type": "Lovers"
+            })
+        elif time_spent <= 1/3:
+            resp.body = json.dumps({
+                "pct_spent_together": time_spent,
+                "type": "Singles"
+            })
+        else:
+            resp.body = json.dumps({
+                "pct_spent_together": time_spent,
+                "type": "Friends"
+            })
