@@ -204,12 +204,12 @@ class DuoType:
             arr_spent.append(spent_together)
 
         time_spent = np.average(np.array(arr_spent))
-        if time_spent >= 2/3:
+        if time_spent >= 2 / 3:
             resp.body = json.dumps({
                 "pct_spent_together": time_spent,
                 "type": "Lovers"
             })
-        elif time_spent <= 1/3:
+        elif time_spent <= 1 / 3:
             resp.body = json.dumps({
                 "pct_spent_together": time_spent,
                 "type": "Singles"
@@ -219,3 +219,84 @@ class DuoType:
                 "pct_spent_together": time_spent,
                 "type": "Friends"
             })
+
+
+class FarmerType:
+    def on_get(self, req, resp):
+        logger.info("GET /classification/duo-type")
+        conn = database.get_connection()
+
+        params = req.params
+        summoner1 = database.select_summoner(conn=conn,
+                                             summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn,
+                                             summoner_name=params["summoner2"])
+        common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+
+        values = {summoner1.name: {"share": [], "csd": []}, summoner2.name: {"share": [], "csd": []}}
+        for game in common_games:
+            team_cs = database.select_team_cs(conn=conn, team_id=game["s1_teamid"], game_id=game["gameid"])
+            p1_stats = database.select_stats(conn=conn, statid=game["s1_statid"])
+            p2_stats = database.select_stats(conn=conn, statid=game["s2_statid"])
+
+            # Creep Share
+            p1_e_jgl = p1_stats.neutral_minions_killed_enemy_jungle if p1_stats.neutral_minions_killed_enemy_jungle is not None else 0
+            p1_t_jgl = p1_stats.neutral_minions_killed_team_jungle if p1_stats.neutral_minions_killed_team_jungle is not None else 0
+
+            p2_e_jgl = p2_stats.neutral_minions_killed_enemy_jungle if p2_stats.neutral_minions_killed_enemy_jungle is not None else 0
+            p2_t_jgl = p2_stats.neutral_minions_killed_team_jungle if p2_stats.neutral_minions_killed_team_jungle is not None else 0
+
+            if team_cs[0]["cs"] is None:
+                continue
+            p1_cs = p1_stats.total_minions_killed + p1_e_jgl + p1_t_jgl
+            p1_cs_share = analysis.base_analysis.cs_share(p1_cs, team_cs[0]["cs"])
+            values[summoner1.name]["share"].append(ss.norm.cdf(p1_cs_share, enums.CreepShare.MU, enums.CreepShare.SIG))
+
+            p2_cs = p2_stats.total_minions_killed + p2_e_jgl + p2_t_jgl
+            p2_cs_share = analysis.base_analysis.cs_share(p2_cs, team_cs[0]["cs"])
+            values[summoner2.name]["share"].append(ss.norm.cdf(p2_cs_share, enums.CreepShare.MU, enums.CreepShare.SIG))
+
+            # CS Difference
+            p1_opponent = database.select_opponent(
+                conn=conn,
+                participant_id=game["s1_participantid"],
+                game_id=game["gameid"],
+                position=(game["s1_lane"], game["s1_role"])
+            )
+            p2_opponent = database.select_opponent(
+                conn=conn,
+                participant_id=game["s2_participantid"],
+                game_id=game["gameid"],
+                position=(game["s2_lane"], game["s2_role"])
+            )
+            if p1_opponent is None:
+                continue
+            if p2_opponent is None:
+                continue
+            p1_frames = database.select_participant_frames(conn=conn, participant_id=game["s1_participantid"])
+            p1_opponent_frames = database.select_participant_frames(conn=conn,
+                                                                    participant_id=p1_opponent.participant_id)
+            p2_frames = database.select_participant_frames(conn=conn, participant_id=game["s2_participantid"])
+            p2_opponent_frames = database.select_participant_frames(conn=conn,
+                                                                    participant_id=p2_opponent.participant_id)
+
+            p1_cs_diff = analysis.base_analysis.cs_diff(frames=p1_frames,
+                                                        opponent_frames=p1_opponent_frames)
+            p2_cs_diff = analysis.base_analysis.cs_diff(frames=p2_frames,
+                                                        opponent_frames=p2_opponent_frames)
+
+            values[summoner1.name]["csd"].append(ss.norm.cdf(p1_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG))
+            values[summoner2.name]["csd"].append(ss.norm.cdf(p2_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG))
+
+        farmer = analysis.classification.classify_farmer_type(
+            p1_cs=np.nanmean(np.array(values[summoner1.name]["share"])),
+            p2_cs=np.nanmean(np.array(values[summoner2.name]["share"])),
+            p1_csd=np.nanmean(np.array(values[summoner1.name]["csd"])),
+            p2_csd=np.nanmean(np.array(values[summoner2.name]["csd"])),
+        )
+
+        resp.body = json.dumps({
+            "cluster_centre": farmer["cluster_centre"],
+            summoner1.name: farmer["1"],
+            summoner2.name: farmer["2"],
+        })

@@ -80,3 +80,15 @@ class KDA:
     MU = 2.443817906752854
     VAR = 11.433985584080357
     SIG = math.sqrt(VAR)
+
+
+class CreepShare:
+    MU = 0.16313912009512485
+    VAR = 0.008469042363127682
+    SIG = math.sqrt(VAR)
+
+
+class CSD:
+    MU = -0.005484011007172437
+    VAR = 463.6030492665293
+    SIG = math.sqrt(VAR)

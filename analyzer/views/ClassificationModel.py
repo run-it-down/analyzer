@@ -89,3 +89,52 @@ class MurderousDuoModel:
             "0": centres[0],
             "1": centres[1]
         })
+
+
+class FarmerType:
+    def on_get(self, req, resp):
+        """Calculates classification model for Farmer class."""
+        logger.info("GET /model/farmer-type")
+        conn = database.get_connection()
+        games = database.select_all_games(conn=conn)
+
+        values = []
+        for game in games:
+            stats = database.select_stats(conn=conn, statid=game["s1_statid"])
+            team_cs = database.select_team_cs(conn=conn, team_id=game["s1_teamid"], game_id=game["gameid"])
+
+            e_jgl = stats.neutral_minions_killed_enemy_jungle if stats.neutral_minions_killed_enemy_jungle is not None else 0
+            t_jgl = stats.neutral_minions_killed_team_jungle if stats.neutral_minions_killed_team_jungle is not None else 0
+
+            if team_cs[0]["cs"] is None:
+                continue
+            cs = stats.total_minions_killed + e_jgl + t_jgl
+            cs_share = analysis.base_analysis.cs_share(cs, team_cs[0]["cs"])
+
+            p1_frames = database.select_participant_frames(conn=conn, participant_id=game["s1_participantid"])
+            p1_opponent = database.select_opponent(
+                conn=conn,
+                participant_id=game["s1_participantid"],
+                game_id=game["gameid"],
+                position=(game["s1_lane"], game["s1_role"])
+            )
+            if p1_opponent is not None:
+                p1_opponent_frames = database.select_participant_frames(conn=conn,
+                                                                        participant_id=p1_opponent.participant_id)
+                if len(p1_opponent_frames) > 0:
+                    p1_cs_diff = analysis.base_analysis.cs_diff(frames=p1_frames,
+                                                                opponent_frames=p1_opponent_frames)
+
+                    values.append([ss.norm.cdf(cs_share, enums.CreepShare.MU, enums.CreepShare.SIG),
+                                   ss.norm.cdf(p1_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG)])
+
+        means = KMeans(n_clusters=2, random_state=0)
+        cluster_arr = means.fit(np.array(values))
+        # fit needs to be done, so we can use this model later on in other analysis steps
+        pickle.dump(means, open('./kmeans_farmers.pkl', 'wb'))
+
+        centres = means.cluster_centers_.tolist()
+        resp.body = json.dumps({
+            "0": centres[0],
+            "1": centres[1]
+        })

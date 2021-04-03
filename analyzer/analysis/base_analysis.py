@@ -96,3 +96,34 @@ def gold_diff(frames, opponent_frames):
 
 def gold_share(p_gold, team_gold):
     return p_gold / team_gold
+
+
+def cs_share(p_cs, team_cs):
+    return p_cs / team_cs
+
+
+def cs_diff(frames, opponent_frames):
+    diff = {
+        "overall": [],
+        "early": [],
+        "mid": [],
+        "late": []
+    }
+    for idx, frame in enumerate(frames):
+        p_cs = frame["minionskilled"] + frame["jungleminionskilled"]
+        o_cs = opponent_frames[idx]["minionskilled"] + opponent_frames[idx]["jungleminionskilled"]
+        csd = p_cs - o_cs
+        if idx <= GameState.EARLY[1]:
+            diff["early"].append(csd)
+        elif GameState.MID[0] <= idx <= GameState.MID[1]:
+            diff["mid"].append(csd)
+        elif GameState.LATE[0] <= idx <= GameState.LATE[1]:
+            diff["late"].append(csd)
+        diff["overall"].append(csd)
+
+    diff["overall"] = np.average(np.array(diff["overall"]))
+    diff["early"] = np.average(np.array(diff["early"]))
+    diff["mid"] = np.average(np.array(diff["mid"]))
+    diff["late"] = np.average(np.array(diff["late"]))
+
+    return diff
