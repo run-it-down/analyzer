@@ -1,14 +1,9 @@
 import json
 
 import numpy as np
-import scipy.cluster as cluster
-from sklearn.cluster import KMeans
-import scipy.stats as ss
-import pickle
 
 import analysis
 import database
-import enums
 import util
 
 logger = util.Logger(__name__)
@@ -129,4 +124,55 @@ class AverageWinRate:
 
         resp.body = json.dumps({
             "wr": np.nanmean(rates)
+        })
+
+
+class AverageCs:
+    def on_get(self, req, resp):
+        logger.info("GET /average/aggression")
+        conn = database.get_connection()
+        games = database.select_all_games(conn=conn)
+
+        shares = []
+        cs_diff = {"overall": [], "early": [], "mid": [], "late": []}
+
+        for game in games:
+            stats = database.select_stats(conn=conn, statid=game["s1_statid"])
+            team_cs = database.select_team_cs(conn=conn, team_id=game["s1_teamid"], game_id=game["gameid"])
+
+            e_jgl = stats.neutral_minions_killed_enemy_jungle if stats.neutral_minions_killed_enemy_jungle is not None else 0
+            t_jgl = stats.neutral_minions_killed_team_jungle if stats.neutral_minions_killed_team_jungle is not None else 0
+
+            cs = stats.total_minions_killed + e_jgl + t_jgl
+            if team_cs[0]["cs"] is None:
+                continue
+            cs_share = analysis.base_analysis.cs_share(cs, team_cs[0]["cs"])
+            shares.append(cs_share)
+
+            p1_frames = database.select_participant_frames(conn=conn, participant_id=game["s1_participantid"])
+            p1_opponent = database.select_opponent(
+                conn=conn,
+                participant_id=game["s1_participantid"],
+                game_id=game["gameid"],
+                position=(game["s1_lane"], game["s1_role"])
+            )
+            if p1_opponent is not None:
+                p1_opponent_frames = database.select_participant_frames(conn=conn,
+                                                                        participant_id=p1_opponent.participant_id)
+                if len(p1_opponent_frames) > 0:
+                    p1_cs_diff = analysis.base_analysis.cs_diff(frames=p1_frames,
+                                                                opponent_frames=p1_opponent_frames)
+                    cs_diff["overall"].append(p1_cs_diff["overall"])
+                    cs_diff["early"].append(p1_cs_diff["early"])
+                    cs_diff["mid"].append(p1_cs_diff["mid"])
+                    cs_diff["late"].append(p1_cs_diff["late"])
+
+        resp.body = json.dumps({
+            "cs_share": np.nanmean(shares),
+            "cs_diff": {
+                "overall": np.nanmean(cs_diff["overall"]),
+                "early": np.nanmean(cs_diff["early"]),
+                "mid": np.nanmean(cs_diff["mid"]),
+                "late": np.nanmean(cs_diff["late"]),
+            }
         })

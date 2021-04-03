@@ -22,13 +22,16 @@ def create():
     api.add_route('/classification/match-type', views.Classification.MatchType())
     api.add_route('/classification/murderous-duo', views.Classification.MurderousDuo())
     api.add_route('/classification/duo-type', views.Classification.DuoType())
+    api.add_route('/classification/farmer-type', views.Classification.FarmerType())
 
     api.add_route('/average/aggression', views.Averages.AverageAggression())
     api.add_route('/average/basics', views.Averages.AverageBasics())
     api.add_route('/average/win-rate', views.Averages.AverageWinRate())
+    api.add_route('/average/cs', views.Averages.AverageCs())
 
     api.add_route('/model/millionaire', views.ClassificationModel.MillionaireModel())
     api.add_route('/model/murderous-duo', views.ClassificationModel.MurderousDuoModel())
+    api.add_route('/model/farmer-type', views.ClassificationModel.FarmerType())
 
     logger.info('falcon initialized')
 
