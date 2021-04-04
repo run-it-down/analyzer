@@ -138,3 +138,36 @@ class FarmerType:
             "0": centres[0],
             "1": centres[1]
         })
+
+
+class TacticianModel:
+    def on_get(self, req, resp):
+        logger.info("GET /average/aggression")
+        conn = database.get_connection()
+        games = database.select_all_games(conn=conn)
+
+        values = []
+        for game in games:
+            frames = database.select_game_frames(conn=conn, game_id=game["gameid"])
+            kills = database.select_all_kill_timeline(conn=conn, game_id=game["gameid"])
+            objectives = database.select_objectives(conn=conn, game_id=game["gameid"])
+
+            t = analysis.classification.tactician(game["s1_participantid"], game["s1_teamid"], kills, objectives,
+                                                  frames, conn)
+            if np.isnan(t["worthness"]):
+                continue
+            if np.isnan(t["objectives"]):
+                continue
+            values.append([ss.norm.cdf(t["worthness"], enums.Worthness.MU, enums.Worthness.SIG),
+                           ss.expon.pdf(t["objectives"], scale=enums.KillObjectives.MU)])
+
+        means = KMeans(n_clusters=2, random_state=0)
+        cluster_arr = means.fit(np.array(values))
+        # fit needs to be done, so we can use this model later on in other analysis steps
+        pickle.dump(means, open('./kmeans_tactician.pkl', 'wb'))
+
+        centres = means.cluster_centers_.tolist()
+        resp.body = json.dumps({
+            "0": centres[0],
+            "1": centres[1]
+        })
