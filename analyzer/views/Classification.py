@@ -300,3 +300,48 @@ class FarmerType:
             summoner1.name: farmer["1"],
             summoner2.name: farmer["2"],
         })
+
+
+class Tactician:
+    def on_get(self, req, resp):
+        logger.info("GET /classification/tactician")
+        conn = database.get_connection()
+
+        params = req.params
+        summoner1 = database.select_summoner(conn=conn,
+                                             summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn,
+                                             summoner_name=params["summoner2"])
+        common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+        values = {summoner1.name: {"worthness": [], "objectives": []},
+                  summoner2.name: {"worthness": [], "objectives": []}}
+
+        for game in common_games:
+            frames = database.select_game_frames(conn=conn, game_id=game["gameid"])
+            kills = database.select_all_kill_timeline(conn=conn, game_id=game["gameid"])
+            objectives = database.select_objectives(conn=conn, game_id=game["gameid"])
+
+            p1_t = analysis.classification.tactician(game["s1_participantid"], game["s1_teamid"], kills, objectives,
+                                                     frames, conn)
+            p2_t = analysis.classification.tactician(game["s2_participantid"], game["s1_teamid"], kills, objectives,
+                                                     frames, conn)
+
+            values[summoner1.name]["worthness"].append(
+                ss.norm.cdf(p1_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG))
+            values[summoner2.name]["worthness"].append(
+                ss.norm.cdf(p2_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG))
+            values[summoner1.name]["objectives"].append(ss.expon.pdf(p2_t["objectives"], scale=enums.KillObjectives.MU))
+            values[summoner2.name]["objectives"].append(ss.expon.pdf(p2_t["objectives"], scale=enums.KillObjectives.MU))
+
+        tactician = analysis.classification.classify_tactician(
+            p1_worth=np.nanmean(np.array(values[summoner1.name]["worthness"])),
+            p2_worth=np.nanmean(np.array(values[summoner2.name]["worthness"])),
+            p1_obj=np.nanmean(np.array(values[summoner1.name]["objectives"])),
+            p2_obj=np.nanmean(np.array(values[summoner2.name]["objectives"])),
+        )
+
+        resp.body = json.dumps({
+            "cluster_centre": tactician["cluster_centre"],
+            summoner1.name: tactician["1"],
+            summoner2.name: tactician["2"],
+        })

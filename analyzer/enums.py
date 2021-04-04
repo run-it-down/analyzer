@@ -92,3 +92,29 @@ class CSD:
     MU = -0.005484011007172437
     VAR = 463.6030492665293
     SIG = math.sqrt(VAR)
+
+
+class Objectives:
+    class Building:
+        NEXUS_TURRET = 4
+        BASE_TURRET = 3
+        INNER_TURRET = 2
+        OUTER_TURRET = 1
+
+    class EliteMonster:
+        BARON_NASHOR = 4
+        ELDER_DRAGON = 4
+        ELEMENTAL_DRAGON = 3
+        RIFT_HERALD = 2
+
+
+class Worthness:
+    MU = 0.5736582164941724
+    VAR = 0.2641513267460564
+    SIG = math.sqrt(VAR)
+
+
+class KillObjectives:
+    MU = 0.5292568737160234
+    VAR = 0.6362333466377738
+    SIG = math.sqrt(VAR)
