@@ -1,16 +1,18 @@
 FROM alpine:3.12.0
 
 RUN apk update
-RUN apk add postgresql-dev gcc python3-dev musl-dev openblas-dev
+RUN apk add postgresql-dev gcc python3-dev musl-dev openblas-dev g++
 RUN apk add python3
 RUN apk add --update py-pip
-RUN pip install --upgrade pip
+RUN pip install --upgrade pip setuptools wheel
 
 ADD analyzer /analyzer/
 ADD common /common/
 COPY requirements.txt .
 
 RUN pip install -r requirements.txt
+RUN pip install scipy
+RUN pip install scikit-learn
 
 ARG DBHOST_ARG
 ARG DBPORT_ARG
