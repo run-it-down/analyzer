@@ -1,7 +1,10 @@
 import datetime
+import numpy as np
 from string import Template
 import sys
 import threading
+
+from enums import Role
 
 
 def urljoin(*parts):
@@ -16,6 +19,27 @@ def urljoin(*parts):
     last = last.lstrip('/')
 
     return '/'.join([first] + middle + [last])
+
+
+def get_canonic_lane(lane: str, role: str):
+    role_mapping = {
+        ("MIDDLE", "SOLO"): Role.MID,
+        ("TOP", "SOLO"): Role.TOP,
+        ("JUNGLE", "NONE"): Role.JGL,
+        ("BOTTOM", "DUO_CARRY"): Role.BOT,
+        ("BOTTOM", "SOLO"): Role.BOT,
+        ("BOTTOM", "DUO_SUPPORT"): Role.SUP,
+        ("MIDDLE", "DUO"): Role.MID,
+        ("NONE", "DUO_SUPPORT"): Role.SUP,
+    }
+    try:
+        return role_mapping[(lane, role)]
+    except KeyError:
+        return None
+
+
+def normalize(value, min_val, max_val):
+    return (value - min_val) / (max_val - min_val)
 
 
 class Logger:

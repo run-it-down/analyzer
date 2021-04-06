@@ -2,6 +2,7 @@ import json
 
 import analysis
 import database
+import numpy as np
 import util
 
 logger = util.Logger(__name__)
@@ -12,9 +13,15 @@ class WinRate:
         logger.info('GET /winrate')
         params = req.params
         conn = database.get_connection()
-        summoner = database.select_summoner(conn=conn,
-                                            summoner_name=params['summoner'])
-        wr = analysis.base_analysis.get_win_rate(summoner=summoner, conn=conn)
+
+        summoner1 = database.select_summoner(conn=conn,
+                                             summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn,
+                                             summoner_name=params["summoner2"])
+        common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+
+        wr = analysis.base_analysis.win_rate(common_games)
+
         resp.body = json.dumps({
             "win_rate": wr
         })
@@ -25,12 +32,41 @@ class KDA:
         logger.info('GET /kda')
         params = req.params
         conn = database.get_connection()
-        summoner = database.select_summoner(conn=conn,
-                                            summoner_name=params['summoner'])
-        kda = analysis.base_analysis.get_kda(summoner=summoner, conn=conn)
-        resp.body = json.dumps({
-            "kda": kda
-        })
+
+        summoner1 = database.select_summoner(conn=conn,
+                                             summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn,
+                                             summoner_name=params['summoner2'])
+        common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+
+        kdas = {
+            summoner1.name: {"kda": 0, "kills": 0, "deaths": 0, "assists": 0},
+            summoner2.name: {"kda": 0, "kills": 0, "deaths": 0, "assists": 0},
+        }
+        for game in common_games:
+            p1_stats = database.select_stats(conn=conn, statid=game["s1_statid"])
+            p2_stats = database.select_stats(conn=conn, statid=game["s2_statid"])
+
+            kdas[summoner1.name]["kills"] += p1_stats.kills
+            kdas[summoner1.name]["deaths"] += p1_stats.deaths
+            kdas[summoner1.name]["assists"] += p1_stats.assists
+
+            kdas[summoner2.name]["kills"] += p2_stats.kills
+            kdas[summoner2.name]["deaths"] += p2_stats.deaths
+            kdas[summoner2.name]["assists"] += p2_stats.assists
+
+        kdas[summoner1.name]["kda"] = analysis.base_analysis.avg_kda(
+            kills=kdas[summoner1.name]["kills"],
+            deaths=kdas[summoner1.name]["deaths"],
+            assists=kdas[summoner1.name]["assists"],
+        )
+        kdas[summoner2.name]["kda"] = analysis.base_analysis.avg_kda(
+            kills=kdas[summoner2.name]["kills"],
+            deaths=kdas[summoner2.name]["deaths"],
+            assists=kdas[summoner2.name]["assists"],
+        )
+
+        resp.body = json.dumps(kdas)
 
 
 class CreepScore:
@@ -38,6 +74,99 @@ class CreepScore:
         logger.info('GET /cs')
         params = req.params
         conn = database.get_connection()
-        summoner = database.select_summoner(conn=conn, summoner_name=params['summoner'])
-        cs = analysis.base_analysis.get_creep_score(conn=conn, summoner=summoner)
+
+        summoner1 = database.select_summoner(conn=conn, summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn, summoner_name=params['summoner2'])
+        common_game_stats = database.select_common_game_stats(conn=conn, s1=summoner1, s2=summoner2)
+
+        cs = {summoner1.name: 0, summoner2.name: 0}
+        for game in common_game_stats:
+            cs[summoner1.name] += game["s1_totalminionskilled"]
+            cs[summoner2.name] += game["s2_totalminionskilled"]
+
+        cs[summoner1.name] = cs[summoner1.name] / len(common_game_stats)
+        cs[summoner2.name] = cs[summoner2.name] / len(common_game_stats)
+
         resp.body = json.dumps(cs)
+
+
+class AverageRole:
+    def on_get(self, req, resp):
+        logger.info('GET /average_role')
+        params = req.params
+        conn = database.get_connection()
+
+        summoner1 = database.select_summoner(conn=conn, summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn, summoner_name=params['summoner2'])
+        common_game = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+
+        p1_role = analysis.base_analysis.determine_avg_role(games=common_game, role_key="s1_role", lane_key="s1_lane")
+        p2_role = analysis.base_analysis.determine_avg_role(games=common_game, role_key="s2_role", lane_key="s2_lane")
+
+        resp.body = json.dumps({
+            summoner1.name: p1_role,
+            summoner2.name: p2_role
+        })
+
+
+class GoldDifference:
+    def on_get(self, req, resp):
+        logger.info('GET /gold-diffference')
+        params = req.params
+        conn = database.get_connection()
+
+        summoner1 = database.select_summoner(conn=conn, summoner_name=params['summoner1'])
+        summoner2 = database.select_summoner(conn=conn, summoner_name=params['summoner2'])
+        common_game = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
+
+        gold_diff = {
+            summoner1.name: {"overall": [], "early": [], "mid": [], "late": []},
+            summoner2.name: {"overall": [], "early": [], "mid": [], "late": []}
+        }
+        for game in common_game:
+            p1_frames = database.select_participant_frames(conn=conn, participant_id=game["s1_participantid"])
+            p1_opponent = database.select_opponent(
+                conn=conn,
+                participant_id=game["s1_participantid"],
+                game_id=game["gameid"],
+                position=(game["s1_lane"], game["s1_role"])
+            )
+            if p1_opponent is None:
+                continue
+            p1_opponent_frames = database.select_participant_frames(conn=conn, participant_id=p1_opponent.participant_id)
+
+            p2_frames = database.select_participant_frames(conn=conn, participant_id=game["s2_participantid"])
+            p2_opponent = database.select_opponent(
+                conn=conn,
+                participant_id=game["s2_participantid"],
+                game_id=game["gameid"],
+                position=(game["s2_lane"], game["s2_role"])
+            )
+            if p2_opponent is None:
+                continue
+            p2_opponent_frames = database.select_participant_frames(conn=conn, participant_id=p2_opponent.participant_id)
+
+            p1_gold_diff = analysis.base_analysis.gold_diff(frames=p1_frames, opponent_frames=p1_opponent_frames)
+            p2_gold_diff = analysis.base_analysis.gold_diff(frames=p2_frames, opponent_frames=p2_opponent_frames)
+
+            gold_diff[summoner1.name]["overall"].append(p1_gold_diff["overall"])
+            gold_diff[summoner1.name]["early"].append(p1_gold_diff["early"])
+            gold_diff[summoner1.name]["mid"].append(p1_gold_diff["mid"])
+            gold_diff[summoner1.name]["late"].append(p1_gold_diff["late"])
+
+            gold_diff[summoner2.name]["overall"].append(p2_gold_diff["overall"])
+            gold_diff[summoner2.name]["early"].append(p2_gold_diff["early"])
+            gold_diff[summoner2.name]["mid"].append(p2_gold_diff["mid"])
+            gold_diff[summoner2.name]["late"].append(p2_gold_diff["late"])
+
+        gold_diff[summoner1.name]["overall"] = np.nanmean(np.array(gold_diff[summoner1.name]["overall"]))
+        gold_diff[summoner1.name]["early"] = np.nanmean(np.array(gold_diff[summoner1.name]["early"]))
+        gold_diff[summoner1.name]["mid"] = np.nanmean(np.array(gold_diff[summoner1.name]["mid"]))
+        gold_diff[summoner1.name]["late"] = np.nanmean(np.array(gold_diff[summoner1.name]["late"]))
+
+        gold_diff[summoner2.name]["overall"] = np.nanmean(np.array(gold_diff[summoner2.name]["overall"]))
+        gold_diff[summoner2.name]["early"] = np.nanmean(np.array(gold_diff[summoner2.name]["early"]))
+        gold_diff[summoner2.name]["mid"] = np.nanmean(np.array(gold_diff[summoner2.name]["mid"]))
+        gold_diff[summoner2.name]["late"] = np.nanmean(np.array(gold_diff[summoner2.name]["late"]))
+
+        resp.body = json.dumps(gold_diff)

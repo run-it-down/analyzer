@@ -54,7 +54,6 @@ jobs:
             GIT_AUTH_TOKEN=${{ github.token }}
             
             name: Deploy
-
   deploy:
     needs: build
     runs-on: ubuntu-latest
