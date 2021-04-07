@@ -1,9 +1,10 @@
-FROM alpine:3.12.0
+FROM python:3.8-buster
 
-RUN apk update
-RUN apk add postgresql-dev gcc python3-dev musl-dev openblas-dev g++
-RUN apk add python3
-RUN apk add --update py-pip
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+RUN apt-get update
+RUN apt-get install -y postgresql gcc
 RUN pip install --upgrade pip setuptools wheel
 
 ADD analyzer /analyzer/
