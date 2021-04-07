@@ -2,6 +2,7 @@ import math
 
 import numpy as np
 
+import database
 import util
 from enums import Role, GameState, KP
 
@@ -127,3 +128,31 @@ def cs_diff(frames, opponent_frames):
     diff["late"] = np.average(np.array(diff["late"]))
 
     return diff
+
+
+def dragon_times(summoner):
+    dtimes = {
+        'summoner': None,
+        'amount': None,
+        'times': []
+    }
+    conn = database.get_connection()
+    games = database.select_summoner_games(
+        conn=conn,
+        account_id=summoner.account_id,
+    )
+    for g in games:
+        pid = database.select_participant_from_game_and_account(
+            conn=conn,
+            game_id=g,
+            account_id=summoner.account_id
+        )
+        drakes = database.select_dragon_kill_from_participant_id(
+            conn=conn,
+            participant_id=pid,
+        )
+        dtimes['amount'] += drakes.__len__()
+        dtimes['times'].append(drakes)
+
+    database.kill_connection(conn=conn)
+    return dtimes

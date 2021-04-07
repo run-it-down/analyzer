@@ -170,3 +170,104 @@ class GoldDifference:
         gold_diff[summoner2.name]["late"] = np.nanmean(np.array(gold_diff[summoner2.name]["late"]))
 
         resp.body = json.dumps(gold_diff)
+
+
+class AverageGame:
+    def on_get(self, req, resp):
+
+        # win/lose
+        # drakes
+        # nashes
+        # towers
+
+        logger.info('GET /avg-game')
+        params = req.params
+        conn = database.get_connection()
+
+        average_game = {
+            'summoners': [
+                {
+                    'summoner': params['summoner1'],
+                    'kda': {},
+                    'role': None,
+                    'gold:': None,
+                },
+                {
+                    'summoner': params['summoner2'],
+                    'kda': {},
+                    'role': None,
+                    'gold:': None,
+                }
+            ]
+        }
+
+        summoner1 = database.select_summoner(
+            conn=conn,
+            summoner_name=params['summoner1'],
+        )
+        summoner2 = database.select_summoner(
+            conn=conn,
+            summoner_name=params['summoner2'],
+        )
+        common_games = database.select_common_games(
+            conn=conn,
+            s1=summoner1,
+            s2=summoner2,
+        )
+
+        # roles
+        average_game['summoners'][0]['role'] = analysis.base_analysis.determine_avg_role(
+            games=common_games,
+            role_key="s1_role",
+            lane_key="s1_lane",
+        )
+        average_game['summoners'][1]['role'] = analysis.base_analysis.determine_avg_role(
+            games=common_games,
+            role_key="s2_role",
+            lane_key="s2_lane",
+        )
+
+        # kda
+        kdas = {
+            summoner1.name: {"kda": 0, "kills": 0, "deaths": 0, "assists": 0},
+            summoner2.name: {"kda": 0, "kills": 0, "deaths": 0, "assists": 0},
+        }
+        for game in common_games:
+            p1_stats = database.select_stats(conn=conn, statid=game["s1_statid"])
+            p2_stats = database.select_stats(conn=conn, statid=game["s2_statid"])
+
+            kdas[summoner1.name]["kills"] += p1_stats.kills
+            kdas[summoner1.name]["deaths"] += p1_stats.deaths
+            kdas[summoner1.name]["assists"] += p1_stats.assists
+
+            kdas[summoner2.name]["kills"] += p2_stats.kills
+            kdas[summoner2.name]["deaths"] += p2_stats.deaths
+            kdas[summoner2.name]["assists"] += p2_stats.assists
+
+        average_game['summoners'][0]['kda'] = analysis.base_analysis.avg_kda(
+            kills=kdas[summoner1.name]["kills"],
+            deaths=kdas[summoner1.name]["deaths"],
+            assists=kdas[summoner1.name]["assists"],
+        )
+        average_game['summoners'][1]['kda'] = analysis.base_analysis.avg_kda(
+            kills=kdas[summoner2.name]["kills"],
+            deaths=kdas[summoner2.name]["deaths"],
+            assists=kdas[summoner2.name]["assists"],
+        )
+
+        # cs
+        average_game['summoners'][0]['cs'] = analysis.base_analysis.determine_avg_role(
+            games=common_games,
+            role_key="s1_role",
+            lane_key="s1_lane",
+        )
+        average_game['summoners'][1]['cs'] = analysis.base_analysis.determine_avg_role(
+            games=common_games,
+            role_key="s2_role",
+            lane_key="s2_lane",
+        )
+
+        # drakes
+        p1_drakes = analysis.base_analysis.dragon_times(summoner=summoner1)
+        print(p1_drakes)
+        p2_drakes = analysis.base_analysis.dragon_times(summoner=summoner2)
