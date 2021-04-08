@@ -200,7 +200,7 @@ def common_stats(
         inhibs = int(round(inhibs / games, 0))
     except ZeroDivisionError:
         inhibs = 0
-        
+
     try:
         towers = int(round(towers / games, 0))
     except ZeroDivisionError:
@@ -208,11 +208,11 @@ def common_stats(
 
 
     return {
-        'drakes': int(round(dkills / games, 0)),
-        'nash': int(round(nkills / games, 0)),
-        'heralds': int(round(heralds / games, 0)),
-        'inhibis': int(round(inhibs / games, 0)),
-        'towers': int(round(towers / games, 0)),
+        'drakes': dkills,
+        'nash': nkills,
+        'heralds': heralds,
+        'inhibis': inhibs,
+        'towers': towers,
         'first_blood': True if first_blood.count(True) > first_blood.count(False) else False,
         'first_tower': True if first_tower.count(True) > first_tower.count(False) else False,
         'first_inhib': True if first_inhib.count(True) > first_inhib.count(False) else False,
