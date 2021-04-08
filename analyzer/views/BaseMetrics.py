@@ -174,12 +174,6 @@ class GoldDifference:
 
 class AverageGame:
     def on_get(self, req, resp):
-
-        # win/lose
-        # drakes
-        # nashes
-        # towers
-
         logger.info('GET /avg-game')
         params = req.params
         conn = database.get_connection()
@@ -188,17 +182,28 @@ class AverageGame:
             'summoners': [
                 {
                     'summoner': params['summoner1'],
-                    'kda': {},
+                    'kda': 0,
                     'role': None,
-                    'gold:': None,
                 },
                 {
                     'summoner': params['summoner2'],
-                    'kda': {},
+                    'kda': 0,
                     'role': None,
-                    'gold:': None,
                 }
-            ]
+            ],
+            'common': {
+                'winrate': None,
+                'bans': None,
+                'drakes': None,
+                'nash': None,
+                'heralds': None,
+                'first_blood': None,
+                'first_tower': None,
+                'first_inhib': None,
+                'first_baron': None,
+                'first_dragon': None,
+                'first_herald': None,
+            }
         }
 
         summoner1 = database.select_summoner(
@@ -214,6 +219,23 @@ class AverageGame:
             s1=summoner1,
             s2=summoner2,
         )
+
+        common_stats = analysis.base_analysis.common_stats(
+            common_games=common_games,
+        )
+        average_game['common']['drakes'] = common_stats['drakes']
+        average_game['common']['nash'] = common_stats['nash']
+        average_game['common']['heralds'] = common_stats['heralds']
+        average_game['common']['first_blood'] = common_stats['first_blood']
+        average_game['common']['first_tower'] = common_stats['first_tower']
+        average_game['common']['first_inhib'] = common_stats['first_inhib']
+        average_game['common']['first_baron'] = common_stats['first_baron']
+        average_game['common']['first_dragon'] = common_stats['first_dragon']
+        average_game['common']['first_herald'] = common_stats['first_herald']
+        average_game['common']['bans'] = database.select_champion_name_id(
+            conn=conn,
+            champ_id=common_stats['bans'],
+        )[1]
 
         # roles
         average_game['summoners'][0]['role'] = analysis.base_analysis.determine_avg_role(
@@ -256,18 +278,19 @@ class AverageGame:
         )
 
         # cs
-        average_game['summoners'][0]['cs'] = analysis.base_analysis.determine_avg_role(
+        average_game['summoners'][0]['role'] = analysis.base_analysis.determine_avg_role(
             games=common_games,
             role_key="s1_role",
             lane_key="s1_lane",
         )
-        average_game['summoners'][1]['cs'] = analysis.base_analysis.determine_avg_role(
+        average_game['summoners'][1]['role'] = analysis.base_analysis.determine_avg_role(
             games=common_games,
             role_key="s2_role",
             lane_key="s2_lane",
         )
 
-        # drakes
-        p1_drakes = analysis.base_analysis.dragon_times(summoner=summoner1)
-        print(p1_drakes)
-        p2_drakes = analysis.base_analysis.dragon_times(summoner=summoner2)
+        # winrate
+        wr = analysis.base_analysis.win_rate(common_games)
+        average_game['common']['winrate'] = f'{str(wr * 100).replace(".0", "")}%'
+
+        resp.body = json.dumps(average_game)

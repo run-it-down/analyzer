@@ -17,6 +17,7 @@ def create():
     api.add_route('/aggression', views.AggressionMetrics.Aggression())
     api.add_route('/avg-role', views.BaseMetrics.AverageRole())
     api.add_route('/gold-diff', views.BaseMetrics.GoldDifference())
+    api.add_route('/avg-game', views.BaseMetrics.AverageGame())
 
     api.add_route('/classification/millionaire', views.Classification.Millionaire())
     api.add_route('/classification/match-type', views.Classification.MatchType())

@@ -3,7 +3,8 @@ import math
 import numpy as np
 
 import database
-import util
+import model
+from analyzer import util
 from enums import Role, GameState, KP
 
 
@@ -36,7 +37,7 @@ def ss_kill_participation(participant: str, kills):
 
 def avg_kda(kills, deaths, assists):
     try:
-        return (kills + assists) / deaths
+        return round((kills + assists) / deaths, 2)
     except ZeroDivisionError:
         return np.NaN
 
@@ -65,8 +66,12 @@ def determine_avg_role(games, role_key, lane_key):
     if avg_role is np.NaN:
         return "None"
     role_keys = list(mapping.keys())
-    if avg_role - int(avg_role) != 0:
-        return role_keys[math.floor(avg_role) - 1], role_keys[math.ceil(avg_role) - 1]
+    try:
+        if avg_role - int(avg_role) != 0:
+            return role_keys[math.floor(avg_role) - 1], role_keys[math.ceil(avg_role) - 1]
+    except ValueError:
+        # workaround if avg_role is np.NaN not catching np NaN
+        return 'None'
     return role_keys[int(avg_role) - 1]
 
 
@@ -130,29 +135,63 @@ def cs_diff(frames, opponent_frames):
     return diff
 
 
-def dragon_times(summoner):
-    dtimes = {
-        'summoner': None,
-        'amount': None,
-        'times': []
-    }
+def common_stats(
+    common_games,
+):
     conn = database.get_connection()
-    games = database.select_summoner_games(
-        conn=conn,
-        account_id=summoner.account_id,
-    )
-    for g in games:
-        pid = database.select_participant_from_game_and_account(
-            conn=conn,
-            game_id=g,
-            account_id=summoner.account_id
-        )
-        drakes = database.select_dragon_kill_from_participant_id(
-            conn=conn,
-            participant_id=pid,
-        )
-        dtimes['amount'] += drakes.__len__()
-        dtimes['times'].append(drakes)
+    games = 0
 
-    database.kill_connection(conn=conn)
-    return dtimes
+    dkills = 0
+    nkills = 0
+    heralds = 0
+    inhibs = 0
+    towers = 0
+    bans = []
+    first_blood = []
+    first_tower = []
+    first_inhib = []
+    first_baron = []
+    first_dragon = []
+    first_herald = []
+
+    for g in common_games:
+        # same team
+        if g[4] == g[8]:
+            team = database.select_team_from_teamid_and_gameid(
+                conn=conn,
+                game_id=g[0],
+                team_id=g[4],
+            )
+
+            print(f'{team=}')
+
+            dkills += team[12]
+            nkills += team[11]
+            heralds += team[13]
+            inhibs += team[10]
+            towers += team[9]
+            for b in team[14]:
+                bans.append(b)
+            first_blood.append(team[3])
+            first_tower.append(team[4])
+            first_inhib.append(team[5])
+            first_baron.append(team[6])
+            first_dragon.append(team[7])
+            first_herald.append(team[8])
+
+            games += 1
+
+    return {
+        'drakes': int(round(dkills / games, 0)),
+        'nash': int(round(nkills / games, 0)),
+        'heralds': int(round(heralds / games, 0)),
+        'inhibis': int(round(inhibs / games, 0)),
+        'towers': int(round(towers / games, 0)),
+        'first_blood': True if first_blood.count(True) > first_blood.count(False) else False,
+        'first_tower': True if first_tower.count(True) > first_tower.count(False) else False,
+        'first_inhib': True if first_inhib.count(True) > first_inhib.count(False) else False,
+        'first_baron': True if first_baron.count(True) > first_baron.count(False) else False,
+        'first_dragon': True if first_dragon.count(True) > first_dragon.count(False) else False,
+        'first_herald': True if first_herald.count(True) > first_herald.count(False) else False,
+        'bans': max(set(bans), key=bans.count),
+    }
