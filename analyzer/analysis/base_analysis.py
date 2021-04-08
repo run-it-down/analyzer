@@ -181,6 +181,32 @@ def common_stats(
 
             games += 1
 
+    try:
+        dkills = int(round(dkills / games, 0))
+    except ZeroDivisionError:
+        dkills = 0
+
+    try:
+        nkills = int(round(nkills / games, 0))
+    except ZeroDivisionError:
+        nkills = 0
+
+    try:
+        heralds = int(round(heralds / games, 0))
+    except ZeroDivisionError:
+        heralds = 0
+
+    try:
+        inhibs = int(round(inhibs / games, 0))
+    except ZeroDivisionError:
+        inhibs = 0
+        
+    try:
+        towers = int(round(towers / games, 0))
+    except ZeroDivisionError:
+        towers = 0
+
+
     return {
         'drakes': int(round(dkills / games, 0)),
         'nash': int(round(nkills / games, 0)),
