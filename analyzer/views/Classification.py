@@ -79,11 +79,11 @@ class Millionaire:
                 "1": centres[1]
             },
             summoner1.name: {
-                "isClass": bool(model.predict([p1_avg])),
+                "isClass": not bool(model.predict([p1_avg])),
                 "value": p1_avg.tolist()
             },
             summoner2.name: {
-                "isClass": bool(model.predict([p2_avg])),
+                "isClass": not bool(model.predict([p2_avg])),
                 "value": p2_avg.tolist()
             }
         })
@@ -330,7 +330,7 @@ class Tactician:
                 ss.norm.cdf(p1_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG))
             values[summoner2.name]["worthness"].append(
                 ss.norm.cdf(p2_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG))
-            values[summoner1.name]["objectives"].append(ss.expon.pdf(p2_t["objectives"], scale=enums.KillObjectives.MU))
+            values[summoner1.name]["objectives"].append(ss.expon.pdf(p1_t["objectives"], scale=enums.KillObjectives.MU))
             values[summoner2.name]["objectives"].append(ss.expon.pdf(p2_t["objectives"], scale=enums.KillObjectives.MU))
 
         tactician = analysis.classification.classify_tactician(

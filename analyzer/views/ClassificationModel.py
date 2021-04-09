@@ -42,8 +42,11 @@ class MillionaireModel:
                     p1_gold_diff = analysis.base_analysis.gold_diff(frames=p1_frames,
                                                                     opponent_frames=p1_opponent_frames)
 
-                    values.append([ss.norm.cdf(gold_earned, enums.GoldShare.MU, enums.GoldShare.SIG),
-                                   ss.norm.cdf(p1_gold_diff["overall"], enums.GoldDiffAll.MU, enums.GoldDiffAll.SIG)])
+                    earned = ss.norm.cdf(gold_earned, enums.GoldShare.MU, enums.GoldShare.SIG)
+                    diff = ss.norm.cdf(p1_gold_diff["overall"], enums.GoldDiffAll.MU, enums.GoldDiffAll.SIG)
+                    if earned == 0 or diff == 0 or np.isnan(earned) or np.isnan(diff):
+                        continue
+                    values.append([earned, diff])
 
         arr = np.reshape(np.array(values)[np.logical_not(np.isnan(values))], (-1, 2))
         means = KMeans(n_clusters=2, random_state=0)
@@ -76,8 +79,11 @@ class MurderousDuoModel:
             })
 
             if not np.isnan(kp) and not np.isnan(kda):
-                print(kp, kda)
-                values.append([ss.norm.cdf(kp, enums.KP.MU, enums.KP.SIG), ss.expon.cdf(kda, scale=enums.KDA.MU)])
+                kp = ss.norm.cdf(kp, enums.KP.MU, enums.KP.SIG)
+                kda = ss.expon.cdf(kda, scale=enums.KDA.MU)
+                if kp == 0 or kda == 0 or np.isnan(kp) or np.isnan(kda):
+                    continue
+                values.append([kp, kda])
         means = KMeans(n_clusters=2, random_state=0)
 
         cluster_arr = means.fit(np.array(values))
@@ -125,8 +131,11 @@ class FarmerType:
                     p1_cs_diff = analysis.base_analysis.cs_diff(frames=p1_frames,
                                                                 opponent_frames=p1_opponent_frames)
 
-                    values.append([ss.norm.cdf(cs_share, enums.CreepShare.MU, enums.CreepShare.SIG),
-                                   ss.norm.cdf(p1_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG)])
+                    share = ss.norm.cdf(cs_share, enums.CreepShare.MU, enums.CreepShare.SIG)
+                    diff = ss.norm.cdf(p1_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG)
+                    if share == 0 or diff == 0 or np.isnan(share) or np.isnan(diff):
+                        continue
+                    values.append([share, diff])
 
         means = KMeans(n_clusters=2, random_state=0)
         cluster_arr = means.fit(np.array(values))
@@ -158,8 +167,11 @@ class TacticianModel:
                 continue
             if np.isnan(t["objectives"]):
                 continue
-            values.append([ss.norm.cdf(t["worthness"], enums.Worthness.MU, enums.Worthness.SIG),
-                           ss.expon.pdf(t["objectives"], scale=enums.KillObjectives.MU)])
+            worthness = ss.norm.cdf(t["worthness"], enums.Worthness.MU, enums.Worthness.SIG)
+            objectives = ss.expon.pdf(t["objectives"], scale=enums.KillObjectives.MU)
+            if worthness == 0 or np.isnan(worthness) or objectives == 0 or np.isnan(objectives):
+                continue
+            values.append([worthness, objectives])
 
         means = KMeans(n_clusters=2, random_state=0)
         cluster_arr = means.fit(np.array(values))

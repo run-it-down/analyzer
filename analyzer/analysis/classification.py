@@ -18,11 +18,11 @@ def classify_murderous_duo(p1_kp, p2_kp, p1_kda, p2_kda):
             "1": centres[1]
         },
         "1": {
-            "isClass": not bool(prediction[0]),
+            "isClass": bool(prediction[0]),
             "value": [p1_kp, p1_kda]
         },
         "2": {
-            "isClass": not bool(prediction[1]),
+            "isClass": bool(prediction[1]),
             "value": [p2_kp, p2_kp]
         }
     }
@@ -39,11 +39,11 @@ def classify_farmer_type(p1_cs, p2_cs, p1_csd, p2_csd):
             "1": centres[1]
         },
         "1": {
-            "isClass": not bool(prediction[0]),
+            "isClass": bool(prediction[0]),
             "value": [p1_cs, p1_csd]
         },
         "2": {
-            "isClass": not bool(prediction[1]),
+            "isClass": bool(prediction[1]),
             "value": [p2_cs, p2_csd]
         }
     }
@@ -60,11 +60,11 @@ def classify_tactician(p1_worth, p2_worth, p1_obj, p2_obj):
             "1": centres[1]
         },
         "1": {
-            "isClass": not bool(prediction[0]),
+            "isClass": bool(prediction[0]),
             "value": [p1_worth, p1_obj]
         },
         "2": {
-            "isClass": not bool(prediction[1]),
+            "isClass": bool(prediction[1]),
             "value": [p2_worth, p2_obj]
         }
     }

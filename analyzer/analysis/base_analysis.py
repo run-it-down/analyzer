@@ -20,14 +20,14 @@ def kill_participation(participant: str, kills):
     try:
         return summoner_kp / overall_kills
     except ZeroDivisionError:
-        return np.NaN
+        return 0
 
 
 def game_kda(stat):
     try:
         return (stat["kills"] + stat["assists"]) / stat["deaths"]
     except ZeroDivisionError:
-        return np.NaN
+        return 0
 
 
 def ss_kill_participation(participant: str, kills):
@@ -39,7 +39,7 @@ def avg_kda(kills, deaths, assists):
     try:
         return round((kills + assists) / deaths, 2)
     except ZeroDivisionError:
-        return np.NaN
+        return 0
 
 
 def win_rate(games):
