@@ -10,6 +10,7 @@ logger = util.Logger(__name__)
 
 def create():
     api = falcon.API()
+    api.add_route('/common-games', views.BaseMetrics.CommonGames())
     api.add_route('/winrate', views.BaseMetrics.WinRate())
     api.add_route('/kda', views.BaseMetrics.KDA())
     api.add_route('/cs', views.BaseMetrics.CreepScore())

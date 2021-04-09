@@ -294,3 +294,25 @@ class AverageGame:
         average_game['common']['winrate'] = f'{str(wr * 100).replace(".0", "")}%'
 
         resp.body = json.dumps(average_game)
+
+
+class CommonGames:
+    def on_get(self, req, resp):
+        logger.info('GET /common-games')
+        params = req.params
+        conn = database.get_connection()
+        summoner1 = database.select_summoner(
+            conn=conn,
+            summoner_name=params['summoner1'],
+        )
+        summoner2 = database.select_summoner(
+            conn=conn,
+            summoner_name=params['summoner2'],
+        )
+        common_games = database.select_common_games(
+            conn=conn,
+            s1=summoner1,
+            s2=summoner2,
+        )
+
+        resp.body = json.dumps({'common_games': common_games.__len__()})
