@@ -13,7 +13,7 @@ class ChampionCombinations:
         params = req.params
         conn = database.get_connection()
 
-        s1 = database.select_summoner(conn, summoner_name=params["s1"])
-        s2 = database.select_summoner(conn, summoner_name=params["s2"])
+        s1 = database.select_summoner(conn, summoner_name=params["summoner1"])
+        s2 = database.select_summoner(conn, summoner_name=params["summoner12"])
         comb = analysis.combinations.team_champions(s1, s2, conn)
         resp.body = json.dumps(comb)
