@@ -22,6 +22,10 @@ def team_champions(s1: model.Summoner, s2: model.Summoner, conn):
     # iterate over every 2nd entry aka each game and aggregate wins and total games
     for idx, stat_p1 in enumerate(stats[::2]):
         stat_p2 = stats[idx*2+1]
+        print(type(stat_p1))
+        print(f'{stat_p1}')
+        print(type(stat_p2))
+        print(f'{stat_p2}')
         if stat_p1['teamid'] == stat_p2['teamid']:
             champ_set = (stat_p1['champion'], stat_p2['champion'])
             champ_matrix[champ_set]['total'] += 1
