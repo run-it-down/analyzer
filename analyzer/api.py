@@ -47,6 +47,3 @@ def create():
 
 
 application = create()
-
-import waitress
-waitress.serve(application, port=2000)
