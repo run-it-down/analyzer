@@ -49,7 +49,7 @@ class MillionaireModel:
         means = KMeans(n_clusters=2, random_state=0)
         cluster_arr = means.fit(arr)
         # fit needs to be done, so we can use this model later on in other analysis steps
-        pickle.dump(means, open('./kmeans_millionaire.pkl', 'wb'))
+        pickle.dump(means, open('/analyzer/kmeans_millionaire.pkl', 'wb'))
 
         centres = means.cluster_centers_.tolist()
         resp.body = json.dumps({
@@ -82,7 +82,7 @@ class MurderousDuoModel:
 
         cluster_arr = means.fit(np.array(values))
         # fit needs to be done, so we can use this model later on in other analysis steps
-        pickle.dump(means, open('./kmeans_murderous.pkl', 'wb'))
+        pickle.dump(means, open('/analyzer/kmeans_murderous.pkl', 'wb'))
 
         centres = means.cluster_centers_.tolist()
         resp.body = json.dumps({
@@ -131,7 +131,7 @@ class FarmerType:
         means = KMeans(n_clusters=2, random_state=0)
         cluster_arr = means.fit(np.array(values))
         # fit needs to be done, so we can use this model later on in other analysis steps
-        pickle.dump(means, open('./kmeans_farmers.pkl', 'wb'))
+        pickle.dump(means, open('/analyzer/kmeans_farmers.pkl', 'wb'))
 
         centres = means.cluster_centers_.tolist()
         resp.body = json.dumps({
@@ -164,7 +164,7 @@ class TacticianModel:
         means = KMeans(n_clusters=2, random_state=0)
         cluster_arr = means.fit(np.array(values))
         # fit needs to be done, so we can use this model later on in other analysis steps
-        pickle.dump(means, open('./kmeans_tactician.pkl', 'wb'))
+        pickle.dump(means, open('/analyzer/kmeans_tactician.pkl', 'wb'))
 
         centres = means.cluster_centers_.tolist()
         resp.body = json.dumps({

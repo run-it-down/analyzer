@@ -8,7 +8,7 @@ from enums import Constants, Objectives
 
 
 def classify_murderous_duo(p1_kp, p2_kp, p1_kda, p2_kda):
-    model = pickle.load(open('./kmeans_murderous.pkl', 'rb'))
+    model = pickle.load(open('/analyzer/kmeans_murderous.pkl', 'rb'))
     centres = model.cluster_centers_.tolist()
     prediction = model.predict([[p1_kp, p1_kda], [p2_kp, p2_kda]])
 
@@ -29,7 +29,7 @@ def classify_murderous_duo(p1_kp, p2_kp, p1_kda, p2_kda):
 
 
 def classify_farmer_type(p1_cs, p2_cs, p1_csd, p2_csd):
-    model = pickle.load(open('./kmeans_farmers.pkl', 'rb'))
+    model = pickle.load(open('/analyzer/kmeans_farmers.pkl', 'rb'))
     centres = model.cluster_centers_.tolist()
     prediction = model.predict([[p1_cs, p1_csd], [p2_cs, p2_csd]])
 
@@ -50,7 +50,7 @@ def classify_farmer_type(p1_cs, p2_cs, p1_csd, p2_csd):
 
 
 def classify_tactician(p1_worth, p2_worth, p1_obj, p2_obj):
-    model = pickle.load(open('./kmeans_tactician.pkl', 'rb'))
+    model = pickle.load(open('/analyzer/kmeans_tactician.pkl', 'rb'))
     centres = model.cluster_centers_.tolist()
     prediction = model.predict([[p1_worth, p1_obj], [p2_worth, p2_obj]])
 

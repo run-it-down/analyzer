@@ -67,7 +67,7 @@ class Millionaire:
                 [ss.norm.cdf(p2_gold_earned, enums.GoldShare.MU, enums.GoldShare.SIG),
                  ss.norm.cdf(p2_gold_diff["overall"], enums.GoldDiffAll.MU, enums.GoldDiffAll.SIG)])
 
-        model = pickle.load(open('./kmeans_millionaire.pkl', 'rb'))
+        model = pickle.load(open('/analyzer/kmeans_millionaire.pkl', 'rb'))
 
         p1_avg = np.average(values[summoner1.name], axis=0)
         p2_avg = np.average(values[summoner2.name], axis=0)
