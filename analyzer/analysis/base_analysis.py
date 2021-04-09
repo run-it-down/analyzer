@@ -163,8 +163,6 @@ def common_stats(
                 team_id=g[4],
             )
 
-            print(f'{team=}')
-
             dkills += team[12]
             nkills += team[11]
             heralds += team[13]
