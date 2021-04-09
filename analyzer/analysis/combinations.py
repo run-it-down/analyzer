@@ -16,20 +16,19 @@ def team_champions(s1: model.Summoner, s2: model.Summoner, conn):
     """
     # initialize dictionary
     champ_matrix = defaultdict(lambda: {'wins': 0, 'total': 0, 'avg': 0.0})
+    win_value = {'Win': 1, 'Fail': 0}
 
     # get statistics for common games of summoner 1 and summoner 2
-    stats = database.select_common_game_stats(conn=conn, s1=s1, s2=s2)
+    game_stats = database.select_common_game_stats(conn=conn, s1=s1, s2=s2)
     # iterate over every 2nd entry aka each game and aggregate wins and total games
-    for idx, stat_p1 in enumerate(stats[::2]):
-        stat_p2 = stats[idx*2+1]
-        print(type(stat_p1))
-        print(f'{stat_p1}')
-        print(type(stat_p2))
-        print(f'{stat_p2}')
-        if stat_p1['teamid'] == stat_p2['teamid']:
-            champ_set = (stat_p1['champion'], stat_p2['champion'])
-            champ_matrix[champ_set]['total'] += 1
-            champ_matrix[champ_set]['wins'] += int(stat_p1['win'])
+
+    for game_stat in game_stats:
+        p1_champion = database.select_champion_name_id(champ_id=game_stat["s1_champion"], conn=conn)
+        p2_champion = database.select_champion_name_id(champ_id=game_stat["s2_champion"], conn=conn)
+
+        champ_set = (p1_champion['name'], p2_champion['name'])
+        champ_matrix[champ_set]['total'] += 1
+        champ_matrix[champ_set]['wins'] += win_value[game_stat['win']]
 
     # calculate win rate and reformat to array of dictionaries
     result = []
