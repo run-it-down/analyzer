@@ -96,7 +96,6 @@ def ganking(participant, role, frames, kills):
                     if dist * d >= 1000:
                         ganks += 1
 
-    logger.info(f"{ganks}, {overall}, {len(kills)}")
     try:
         return ganks / overall
     except ZeroDivisionError:
