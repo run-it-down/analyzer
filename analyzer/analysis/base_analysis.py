@@ -1,4 +1,5 @@
 import math
+from typing import List
 
 import numpy as np
 
@@ -218,4 +219,24 @@ def common_stats(
         'first_dragon': True if first_dragon.count(True) > first_dragon.count(False) else False,
         'first_herald': True if first_herald.count(True) > first_herald.count(False) else False,
         'bans': max(set(bans), key=bans.count),
+    }
+
+
+def aggregate_game_info(matches):
+    queueType = {}
+    duration = []
+    for match in matches:
+        queue_id = match["queue_id"]
+        description = "None" if match["description"] is None else match["description"]
+        queue_type = match["map"] + ":" + description
+        if queue_id not in queue_type:
+            queue_type[queue_id]["count"] = 0
+            queue_type[queue_id]["type"] = queue_type
+        queue_type[queue_id]["count"] += 1
+        duration.append(match["gameduration"])
+
+    return {
+        "games": len(matches),
+        "queueType": queueType,
+        "duration": np.nanmean(np.array(duration))
     }

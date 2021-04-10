@@ -315,4 +315,12 @@ class CommonGames:
             s2=summoner2,
         )
 
-        resp.body = json.dumps({'common_games': common_games.__len__()})
+        matches = []
+        for game in common_games:
+            match = database.select_general_game_info(conn=conn, game_id=game["gameid"])
+            if match is not None:
+                matches.append(match)
+
+        game_info = analysis.base_analysis.aggregate_game_info(matches)
+
+        resp.body = json.dumps(game_info)
