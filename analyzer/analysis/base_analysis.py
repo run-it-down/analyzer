@@ -226,7 +226,7 @@ def aggregate_game_info(matches):
     queueType = {}
     duration = []
     for match in matches:
-        queue_id = match["queue_id"]
+        queue_id = match["queueid"]
         description = "None" if match["description"] is None else match["description"]
         queue_type = match["map"] + ":" + description
         if queue_id not in queue_type:
