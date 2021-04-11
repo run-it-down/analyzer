@@ -50,7 +50,7 @@ def classify_farmer_type(p1_cs, p2_cs, p1_csd, p2_csd):
 
 
 def classify_tactician(p1_worth, p2_worth, p1_obj, p2_obj):
-    model = pickle.load(open('./kmeans_tactician.pkl', 'rb'))
+    model = pickle.load(open('/analyzer/kmeans_tactician.pkl', 'rb'))
     centres = model.cluster_centers_.tolist()
     prediction = model.predict([[p1_worth, p1_obj], [p2_worth, p2_obj]])
 
