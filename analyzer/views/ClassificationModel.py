@@ -168,7 +168,7 @@ class TacticianModel:
             if np.isnan(t["objectives"]):
                 continue
             worthness = ss.norm.cdf(t["worthness"], enums.Worthness.MU, enums.Worthness.SIG)
-            objectives = ss.expon.pdf(t["objectives"], scale=enums.KillObjectives.MU)
+            objectives = ss.expon.cdf(t["objectives"], scale=enums.KillObjectives.MU)
             if worthness == 0 or np.isnan(worthness) or objectives == 0 or np.isnan(objectives):
                 continue
             values.append([worthness, objectives])
