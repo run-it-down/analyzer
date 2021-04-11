@@ -27,6 +27,8 @@ class Millionaire:
         common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
 
         values = {summoner1.name: [], summoner2.name: []}
+        p1_raw = []
+        p2_raw = []
         for game in common_games:
             p1_stats = database.select_stats(conn=conn, statid=game["s1_statid"])
             p2_stats = database.select_stats(conn=conn, statid=game["s2_statid"])
@@ -60,22 +62,15 @@ class Millionaire:
             p1_gold_diff = analysis.base_analysis.gold_diff(frames=p1_frames, opponent_frames=p1_opponent_frames)
             p2_gold_diff = analysis.base_analysis.gold_diff(frames=p2_frames, opponent_frames=p2_opponent_frames)
 
-            values[summoner1.name].append(
-                [ss.norm.cdf(p1_gold_earned, enums.GoldShare.MU, enums.GoldShare.SIG),
-                 ss.norm.cdf(p1_gold_diff["overall"], enums.GoldDiffAll.MU, enums.GoldDiffAll.SIG)])
-            values[summoner2.name].append(
-                [ss.norm.cdf(p2_gold_earned, enums.GoldShare.MU, enums.GoldShare.SIG),
-                 ss.norm.cdf(p2_gold_diff["overall"], enums.GoldDiffAll.MU, enums.GoldDiffAll.SIG)])
+            p1_share = ss.norm.cdf(p1_gold_earned, enums.GoldShare.MU, enums.GoldShare.SIG)
+            p1_gd = ss.norm.cdf(p1_gold_diff["overall"], enums.GoldDiffAll.MU, enums.GoldDiffAll.SIG)
+            p2_share = ss.norm.cdf(p2_gold_earned, enums.GoldShare.MU, enums.GoldShare.SIG)
+            p2_gd = ss.norm.cdf(p2_gold_diff["overall"], enums.GoldDiffAll.MU, enums.GoldDiffAll.SIG)
+
+            values[summoner1.name].append([p1_share, p1_gd])
+            values[summoner2.name].append([p2_share, p2_gd])
 
         model = pickle.load(open('/analyzer/kmeans_millionaire.pkl', 'rb'))
-
-        p1_ge = np.array(values[summoner1.name][0])
-        p1_gd = np.array(values[summoner1.name][1])
-        p2_ge = np.array(values[summoner2.name][0])
-        p2_gd = np.array(values[summoner2.name][1])
-
-        p1_raw = np.column_stack((p1_ge, p1_gd))
-        p2_raw = np.column_stack((p2_ge, p2_gd))
 
         p1_avg = np.average(values[summoner1.name], axis=0)
         p2_avg = np.average(values[summoner2.name], axis=0)
@@ -95,8 +90,8 @@ class Millionaire:
                 "value": p2_avg.tolist()
             },
             "raw": {
-                summoner1.name: p1_raw.tolist(),
-                summoner2.name: p2_raw.tolist()
+                summoner1.name: p1_raw,
+                summoner2.name: p2_raw
             }
         })
 
@@ -144,27 +139,39 @@ class MurderousDuo:
             summoner1.name: {"kp": [], "kda": []},
             summoner2.name: {"kp": [], "kda": []}
         }
+        p1_raw = []
+        p2_raw = []
         for game in common_games:
             team_kills = database.select_kill_timeline(conn=conn, game_id=game["gameid"], team_id=game["s1_teamid"])
             p1_stats = database.select_stats(conn=conn, statid=game["s1_statid"])
             p2_stats = database.select_stats(conn=conn, statid=game["s2_statid"])
 
-            # Kill Participation
-            murderous_stats[summoner1.name]["kp"].append(ss.norm.cdf(analysis.base_analysis.kill_participation(
+            p1_kp = ss.norm.cdf(analysis.base_analysis.kill_participation(
                 participant=game["s1_participantid"],
                 kills=team_kills,
-            ), enums.KP.MU, enums.KP.VAR))
-            murderous_stats[summoner2.name]["kp"].append(ss.norm.cdf(analysis.base_analysis.kill_participation(
+            ), enums.KP.MU, enums.KP.VAR)
+            p2_kp = ss.norm.cdf(analysis.base_analysis.kill_participation(
                 participant=game["s2_participantid"],
                 kills=team_kills,
-            ), enums.KP.MU, enums.KP.VAR))
-
-            murderous_stats[summoner1.name]["kda"].append(ss.expon.cdf(analysis.base_analysis.game_kda({
+            ), enums.KP.MU, enums.KP.VAR)
+            p1_kda = ss.expon.cdf(analysis.base_analysis.game_kda({
                 "kills": p1_stats.kills, "deaths": p1_stats.deaths, "assists": p1_stats.assists
-            }), scale=enums.KDA.MU))
-            murderous_stats[summoner2.name]["kda"].append(ss.expon.cdf(analysis.base_analysis.game_kda({
+            }), scale=enums.KDA.MU)
+            p2_kda = ss.expon.cdf(analysis.base_analysis.game_kda({
                 "kills": p2_stats.kills, "deaths": p2_stats.deaths, "assists": p2_stats.assists
-            }), scale=enums.KDA.MU))
+            }), scale=enums.KDA.MU)
+
+            if np.isnan(p1_kp) or np.isnan(p1_kda) or np.isnan(p2_kp) or np.isnan(p2_kda):
+                continue
+
+            # Kill Participation
+            murderous_stats[summoner1.name]["kp"].append(p1_kp)
+            murderous_stats[summoner2.name]["kp"].append(p2_kp)
+            murderous_stats[summoner1.name]["kda"].append(p1_kda)
+            murderous_stats[summoner2.name]["kda"].append(p2_kda)
+
+            p1_raw.append([p1_kp, p1_kda])
+            p2_raw.append([p2_kp, p2_kda])
 
         murderous = analysis.classification.classify_murderous_duo(
             p1_kp=np.nanmean(murderous_stats[summoner1.name]["kp"]),
@@ -173,21 +180,13 @@ class MurderousDuo:
             p2_kda=np.nanmean(murderous_stats[summoner2.name]["kda"]),
         )
 
-        p1_kp = np.array(murderous_stats[summoner1.name]["kp"])
-        p1_kda = np.array(murderous_stats[summoner1.name]["kda"])
-        p2_kp = np.array(murderous_stats[summoner2.name]["kp"])
-        p2_kda = np.array(murderous_stats[summoner2.name]["kda"])
-
-        p1_raw = np.column_stack((p1_kp, p1_kda))
-        p2_raw = np.column_stack((p2_kp, p2_kda))
-
         resp.body = json.dumps({
             "cluster_centre": murderous["cluster_centre"],
             summoner1.name: murderous["1"],
             summoner2.name: murderous["2"],
             "raw": {
-                summoner1.name: p1_raw.tolist(),
-                summoner2.name: p2_raw.tolist()
+                summoner1.name: p1_raw,
+                summoner2.name: p2_raw
             }
         })
 
@@ -258,6 +257,8 @@ class FarmerType:
         common_games = database.select_common_games(conn=conn, s1=summoner1, s2=summoner2)
 
         values = {summoner1.name: {"share": [], "csd": []}, summoner2.name: {"share": [], "csd": []}}
+        p1_raw = []
+        p2_raw = []
         for game in common_games:
             team_cs = database.select_team_cs(conn=conn, team_id=game["s1_teamid"], game_id=game["gameid"])
             p1_stats = database.select_stats(conn=conn, statid=game["s1_statid"])
@@ -307,18 +308,22 @@ class FarmerType:
             p2_cs_diff = analysis.base_analysis.cs_diff(frames=p2_frames,
                                                         opponent_frames=p2_opponent_frames)
 
-            values[summoner1.name]["share"].append(ss.norm.cdf(p1_cs_share, enums.CreepShare.MU, enums.CreepShare.SIG))
-            values[summoner2.name]["share"].append(ss.norm.cdf(p2_cs_share, enums.CreepShare.MU, enums.CreepShare.SIG))
-            values[summoner1.name]["csd"].append(ss.norm.cdf(p1_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG))
-            values[summoner2.name]["csd"].append(ss.norm.cdf(p2_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG))
+            if np.isnan(p1_cs_share) or np.isnan(p2_cs_share) or np.isnan(p1_cs_diff["overall"]) or np.isnan(
+                    p2_cs_diff["overall"]):
+                continue
 
-        p1_share = np.array(values[summoner1.name]["share"])
-        p1_csd = np.array(values[summoner1.name]["csd"])
-        p2_share = np.array(values[summoner2.name]["share"])
-        p2_csd = np.array(values[summoner2.name]["csd"])
+            p1_css = ss.norm.cdf(p1_cs_share, enums.CreepShare.MU, enums.CreepShare.SIG)
+            p2_css = ss.norm.cdf(p2_cs_share, enums.CreepShare.MU, enums.CreepShare.SIG)
+            p1_csd = ss.norm.cdf(p1_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG)
+            p2_csd = ss.norm.cdf(p2_cs_diff["overall"], enums.CSD.MU, enums.CSD.SIG)
 
-        p1_raw = np.column_stack((p1_share, p1_csd))
-        p2_raw = np.column_stack((p2_share, p2_csd))
+            values[summoner1.name]["share"].append(p1_css)
+            values[summoner2.name]["share"].append(p2_css)
+            values[summoner1.name]["csd"].append(p1_csd)
+            values[summoner2.name]["csd"].append(p2_csd)
+
+            p1_raw.append([p1_css, p1_csd])
+            p2_raw.append([p2_css, p2_csd])
 
         farmer = analysis.classification.classify_farmer_type(
             p1_cs=np.nanmean(np.array(values[summoner1.name]["share"])),
@@ -332,8 +337,8 @@ class FarmerType:
             summoner1.name: farmer["1"],
             summoner2.name: farmer["2"],
             "raw": {
-                summoner1.name: p1_raw.tolist(),
-                summoner2.name: p2_raw.tolist()
+                summoner1.name: p1_raw,
+                summoner2.name: p2_raw
             }
         })
 
@@ -352,6 +357,8 @@ class Tactician:
         values = {summoner1.name: {"worthness": [], "objectives": []},
                   summoner2.name: {"worthness": [], "objectives": []}}
 
+        p1_raw = []
+        p2_raw = []
         for game in common_games:
             frames = database.select_game_frames(conn=conn, game_id=game["gameid"])
             kills = database.select_all_kill_timeline(conn=conn, game_id=game["gameid"])
@@ -364,20 +371,19 @@ class Tactician:
             if np.isnan(p1_t["worthness"]) or np.isnan(p2_t["worthness"]) or np.isnan(p1_t["objectives"]) or np.isnan(
                     p2_t["objectives"]):
                 continue
-            values[summoner1.name]["worthness"].append(
-                ss.norm.cdf(p1_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG))
-            values[summoner2.name]["worthness"].append(
-                ss.norm.cdf(p2_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG))
-            values[summoner1.name]["objectives"].append(ss.expon.cdf(p1_t["objectives"], scale=enums.KillObjectives.MU))
-            values[summoner2.name]["objectives"].append(ss.expon.cdf(p2_t["objectives"], scale=enums.KillObjectives.MU))
 
-        p1_worth = np.array(values[summoner1.name]["worthness"])
-        p1_obj = np.array(values[summoner1.name]["objectives"])
-        p2_worth = np.array(values[summoner2.name]["worthness"])
-        p2_obj = np.array(values[summoner2.name]["objectives"])
+            p1_worth = ss.norm.cdf(p1_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG)
+            p2_worth = ss.norm.cdf(p2_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG)
+            p1_obj = ss.expon.cdf(p1_t["objectives"], scale=enums.KillObjectives.MU)
+            p2_obj = ss.expon.cdf(p2_t["objectives"], scale=enums.KillObjectives.MU)
 
-        p1_raw = np.column_stack((p1_worth, p1_obj))
-        p2_raw = np.column_stack((p2_worth, p2_obj))
+            values[summoner1.name]["worthness"].append(p1_worth)
+            values[summoner2.name]["worthness"].append(p2_worth)
+            values[summoner1.name]["objectives"].append(p1_obj)
+            values[summoner2.name]["objectives"].append(p2_obj)
+
+            p1_raw.append([p1_worth, p1_obj])
+            p2_raw.append([p2_worth, p2_obj])
 
         tactician = analysis.classification.classify_tactician(
             p1_worth=np.nanmean(np.array(values[summoner1.name]["worthness"])),
@@ -391,7 +397,7 @@ class Tactician:
             summoner1.name: tactician["1"],
             summoner2.name: tactician["2"],
             "raw": {
-                summoner1.name: p1_raw.tolist(),
-                summoner2.name: p2_raw.tolist()
+                summoner1.name: p1_raw,
+                summoner2.name: p2_raw
             }
         })
