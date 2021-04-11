@@ -361,7 +361,8 @@ class Tactician:
                                                      frames, conn)
             p2_t = analysis.classification.tactician(game["s2_participantid"], game["s1_teamid"], kills, objectives,
                                                      frames, conn)
-
+            if np.isnan(p1_t) or np.isnan(p2_t):
+                continue
             values[summoner1.name]["worthness"].append(
                 ss.norm.cdf(p1_t["worthness"], enums.Worthness.MU, enums.Worthness.SIG))
             values[summoner2.name]["worthness"].append(
