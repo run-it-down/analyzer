@@ -1,6 +1,6 @@
 Cython==0.29.22
 dataclasses-json==0.5.2
-falcon==2.0.0
+falcon
 gunicorn==20.0.4
 psycopg2-binary==2.8.6
 requests~=2.24.0
