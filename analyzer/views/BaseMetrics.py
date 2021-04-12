@@ -23,7 +23,7 @@ class WinRate:
         wr = analysis.base_analysis.win_rate(common_games)
 
         resp.body = json.dumps({
-            "win_rate": f'{str(wr * 100).replace(".0", "")}%'
+            "win_rate": round(wr, 2)
         })
 
 
