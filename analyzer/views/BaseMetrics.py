@@ -84,8 +84,14 @@ class CreepScore:
             cs[summoner1.name] += game["s1_totalminionskilled"]
             cs[summoner2.name] += game["s2_totalminionskilled"]
 
-        cs[summoner1.name] = cs[summoner1.name] / len(common_game_stats)
-        cs[summoner2.name] = cs[summoner2.name] / len(common_game_stats)
+        try:
+            cs[summoner1.name] = cs[summoner1.name] / len(common_game_stats)
+        except ZeroDivisionError:
+            cs[summoner1.name] = 0
+        try:
+            cs[summoner2.name] = cs[summoner2.name] / len(common_game_stats)
+        except ZeroDivisionError:
+            cs[summoner2.name] = 0
 
         resp.body = json.dumps(cs)
 
