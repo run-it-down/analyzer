@@ -186,6 +186,8 @@ def _objective_value(obj_type, obj_subtype):
             return Objectives.Building.BASE_TURRET
         elif obj_subtype == 'NEXUS_TURRET':
             return Objectives.Building.NEXUS_TURRET
+    # return 0 for edge case towertype == 'UNDEFINED_TURRET' (are you kidding me?!)
+    return 0
 
 
 def is_worth_fight(members, team_id):
